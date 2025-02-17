@@ -5,7 +5,6 @@ from PyQt5.QtGui import QPixmap, QIcon, QColor, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
-import matplotlib.pyplot as plt  # Hozzáadott importálás
 
 class MainPage(QWidget):
     def __init__(self):
@@ -14,6 +13,28 @@ class MainPage(QWidget):
         self.setWindowTitle("Main Page")
         self.setGeometry(100, 100, 1200, 800)
         self.showFullScreen()
+
+        # Adatbázis jellegű dictionary a profilok adataival
+        self.profiles_data = {
+            "Magda Ágoston": {
+                "image": "profilkepek/Agoston.jpg",
+                "phone": "+36 30 123 4567",
+                "email": "agoston@example.com",
+                "working_hours": "9:00 - 17:00"
+            },
+            "Kaiser Móric": {
+                "image": "profilkepek/Moric.jpg",
+                "phone": "+36 30 234 5678",
+                "email": "moric@example.com",
+                "working_hours": "10:00 - 18:00"
+            },
+            "Podhorányi Donát": {
+                "image": "profilkepek/Donat.jpg",
+                "phone": "+36 30 345 6789",
+                "email": "donat@example.com",
+                "working_hours": "8:00 - 16:00"
+            }
+        }
 
         # Fő layout: Horizontális, hogy a bal oldali navigáció és a fő tartalom elférjen
         main_layout = QHBoxLayout()
@@ -73,6 +94,8 @@ class MainPage(QWidget):
                 button.clicked.connect(self.logout)
             elif button_text == "Grafikonok":
                 button.clicked.connect(self.show_charts)
+            elif button_text == "Jogosultságok":
+                button.clicked.connect(self.show_permissions)
             nav_bar_layout.addWidget(button)
 
         # Spacer a menüpontok és az alja között
@@ -81,7 +104,7 @@ class MainPage(QWidget):
         # Fő tartalom jobb oldalon
         main_content_layout = QVBoxLayout()
 
-        # StackedWidget a számlálóknak és grafikonoknak
+        # StackedWidget a számlálóknak, grafikonoknak, jogosultságoknak és a profil részletek oldalának
         self.stacked_widget = QStackedWidget()
 
         # 1. Oldal: Számlálók
@@ -123,6 +146,9 @@ class MainPage(QWidget):
         charts_container_layout.addWidget(self.create_chart("Edzők teljesítménye", "barh", [80, 90, 70, 95, 85], ["Edző 1", "Edző 2", "Edző 3", "Edző 4", "Edző 5"]))
         charts_container_layout.addWidget(self.create_chart("Felhasználói aktivitás szórása", "scatter", np.random.rand(100) * 100, None, np.random.rand(100) * 100))
 
+        # Térköz hozzáadása a grafikonok között
+        charts_container_layout.setSpacing(20)
+
         charts_container.setLayout(charts_container_layout)
         scroll_area.setWidget(charts_container)
 
@@ -131,6 +157,11 @@ class MainPage(QWidget):
 
         charts_widget.setLayout(charts_layout)
         self.stacked_widget.addWidget(charts_widget)
+
+        # 3. Oldal: Jogosultságok / Profilok
+        self.permissions_widget = QWidget()
+        self.build_permissions_page()  # Létrehozza a profilok listáját
+        self.stacked_widget.addWidget(self.permissions_widget)
 
         # Alapértelmezett oldal: Számlálók
         self.stacked_widget.setCurrentIndex(0)
@@ -162,7 +193,7 @@ class MainPage(QWidget):
 
     def create_chart(self, title, chart_type, data, labels=None, y_data=None):
         """Grafikon generálása a megadott típus szerint."""
-        fig = Figure(figsize=(10, 4))  # Csökkentett magasság a grafikonoknak
+        fig = Figure(figsize=(10, 5))  # Nagyobb méret a jobb láthatóság érdekében
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
 
@@ -177,7 +208,7 @@ class MainPage(QWidget):
         elif chart_type == "scatter":
             ax.scatter(data, y_data, color="orange", s=50)
 
-        ax.set_title(title, color="orange", fontsize=14)  # Kisebb cím betűméret
+        ax.set_title(title, color="orange", fontsize=16)
         ax.set_facecolor("#222")
         fig.patch.set_facecolor("#222")
         ax.tick_params(colors="white")
@@ -226,13 +257,152 @@ class MainPage(QWidget):
         """Számlálók megjelenítése."""
         self.stacked_widget.setCurrentIndex(0)
 
+    def build_permissions_page(self):
+        """Létrehozza a profilok listáját a jogosultságok oldalon."""
+        self.permissions_widget = QWidget()
+        permissions_layout = QHBoxLayout()
+
+        # A profilok tuple csak a nevet és a kép elérési útját tartalmazza
+        profiles = [
+            ("Magda Ágoston", "profilkepek/Agoston.jpg"),
+            ("Kaiser Móric", "profilkepek/Moric.jpg"),
+            ("Podhorányi Donát", "profilkepek/Donat.jpg"),
+        ]
+
+        for name, image_path in profiles:
+            profile_widget = QWidget()
+            profile_layout = QVBoxLayout()
+            profile_widget.setStyleSheet("background-color: black; border-radius: 20px; padding: 20px;")
+
+            # Profilkép megjelenítése nagyobb méretben, kontrasztos kerettel
+            profile_pic = QLabel()
+            pic = QPixmap(image_path).scaled(
+                450, 450, 
+                Qt.KeepAspectRatio, 
+                Qt.SmoothTransformation
+            )
+            profile_pic.setPixmap(pic)
+            profile_pic.setAlignment(Qt.AlignCenter)
+            profile_pic.setStyleSheet("""
+                border: 2px solid orange;
+                border-radius: 10px;
+                margin-bottom: 10px;
+            """)
+
+            # Név
+            name_label = QLabel(name)
+            name_label.setAlignment(Qt.AlignCenter)
+            name_label.setStyleSheet("font-size: 22px; font-weight: bold; color: orange;")
+
+            # Részletek gomb
+            details_button = QPushButton("Részletek")
+            details_button.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 16px;
+                    font-weight: bold;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            # A gomb kattintása esetén meghívjuk a show_profile_details metódust,
+            # átadva a profil nevét, így az adatokat a profiles_data dictionary-ből tudjuk majd lekérdezni.
+            details_button.clicked.connect(lambda checked, name=name: self.show_profile_details(name))
+
+            # Layout összerakása
+            profile_layout.addWidget(profile_pic)
+            profile_layout.addWidget(name_label)
+            profile_layout.addWidget(details_button)
+            profile_widget.setLayout(profile_layout)
+            permissions_layout.addWidget(profile_widget)
+
+        self.permissions_widget.setLayout(permissions_layout)
+
+    def show_permissions(self):
+        """Megjeleníti a profilok listáját (jogosultságok oldalt)."""
+        self.stacked_widget.setCurrentWidget(self.permissions_widget)
+
+    def show_profile_details(self, profile_name):
+        """Profil részleteket megjelenítő oldal létrehozása a megadott profilnév alapján."""
+        details_widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Profil adatok lekérése a dictionary-ből
+        data = self.profiles_data.get(profile_name, {})
+        if not data:
+            return
+
+        # Profilkép
+        profile_pic = QLabel()
+        pic = QPixmap(data["image"]).scaled(450, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        profile_pic.setPixmap(pic)
+        profile_pic.setAlignment(Qt.AlignCenter)
+        profile_pic.setStyleSheet("""
+            border: 2px solid orange;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        """)
+
+        # Név
+        name_label = QLabel(profile_name)
+        name_label.setAlignment(Qt.AlignCenter)
+        name_label.setStyleSheet("font-size: 28px; font-weight: bold; color: orange; margin-bottom: 20px;")
+
+        # További információk
+        phone_label = QLabel(f"Telefonszám: {data['phone']}")
+        phone_label.setAlignment(Qt.AlignCenter)
+        phone_label.setStyleSheet("font-size: 20px; color: white;")
+        
+        email_label = QLabel(f"E-mail: {data['email']}")
+        email_label.setAlignment(Qt.AlignCenter)
+        email_label.setStyleSheet("font-size: 20px; color: white;")
+        
+        hours_label = QLabel(f"Munkaidő: {data['working_hours']}")
+        hours_label.setAlignment(Qt.AlignCenter)
+        hours_label.setStyleSheet("font-size: 20px; color: white;")
+        
+        # Vissza gomb, hogy visszatérjünk a profilok listájához
+        back_button = QPushButton("Vissza")
+        back_button.setStyleSheet("""
+            QPushButton {
+                background-color: orange;
+                color: black;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #ffb84d;
+            }
+        """)
+        back_button.clicked.connect(self.back_to_permissions)
+
+        # Elek elrendezése
+        layout.addWidget(profile_pic)
+        layout.addWidget(name_label)
+        layout.addWidget(phone_label)
+        layout.addWidget(email_label)
+        layout.addWidget(hours_label)
+        layout.addWidget(back_button)
+        details_widget.setLayout(layout)
+
+        # Az új oldalt hozzáadjuk a stacked widget-hez, majd megjelenítjük
+        self.stacked_widget.addWidget(details_widget)
+        self.stacked_widget.setCurrentWidget(details_widget)
+
+    def back_to_permissions(self):
+        """Visszatérés a profilok listájához."""
+        self.stacked_widget.setCurrentWidget(self.permissions_widget)
+
     def logout(self):
         """Kijelentkezés logika - visszadob a login oldalra."""
         self.close()  # Aktuális ablak bezárása
-        
-        # Késleltetett importálás
         from login_window import LoginWindow  # Késleltetett importálás a körkörös import elkerülésére
-        
         self.login_window = LoginWindow()  # Új login ablak megnyitása
         self.login_window.show()
 
