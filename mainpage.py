@@ -365,7 +365,8 @@ class MainPage(QWidget):
         hours_label.setAlignment(Qt.AlignCenter)
         hours_label.setStyleSheet("font-size: 20px; color: white;")
         
-        # Vissza gomb, hogy visszatérjünk a profilok listájához
+        # Vissza gomb, hogy viss
+	            # Vissza gomb, hogy vissza menjünk a profilok oldalára
         back_button = QPushButton("Vissza")
         back_button.setStyleSheet("""
             QPushButton {
@@ -399,11 +400,12 @@ class MainPage(QWidget):
         """Visszatérés a profilok listájához."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
 
+
     def logout(self):
         """Kijelentkezés logika - visszadob a login oldalra."""
         self.close()  # Aktuális ablak bezárása
         from login_window import LoginWindow  # Késleltetett importálás a körkörös import elkerülésére
-        self.login_window = LoginWindow()  # Új login ablak megnyitása
+        self.login_window = LoginWindow()  # Új login ablak megnyitása  
         self.login_window.show()
 
 
