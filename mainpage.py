@@ -1,5 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem, QSizePolicy, QStackedWidget, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem,
+    QSizePolicy, QStackedWidget, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QLineEdit, QDialog
+)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -10,7 +13,6 @@ from api_client import APIClient  # Importáljuk az APIClient osztályt
 class MainPage(QWidget):
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("Main Page")
         self.setGeometry(100, 100, 1200, 800)
         self.showFullScreen()
@@ -55,7 +57,7 @@ class MainPage(QWidget):
         pixmap = QPixmap("logo.jpg")
         self.logo_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.logo_label.setAlignment(Qt.AlignCenter)
-        self.logo_label.mousePressEvent = self.show_counters  # Logóra kattintás eseménykezelő
+        self.logo_label.mousePressEvent = lambda event: self.show_counters(event)  # Logóra kattintás eseménykezelő
         nav_bar_layout.addWidget(self.logo_label)
 
         # Spacer a logó és menüpontok között (lejjebb tolás)
@@ -149,7 +151,7 @@ class MainPage(QWidget):
         charts_container_layout.addWidget(self.create_chart("Aktivitások havi bontásban", "bar", [50, 130, 400, 350, 500], ["Jan", "Feb", "Már", "Ápr", "Máj"]))
         charts_container_layout.addWidget(self.create_chart("Regisztrációk időbeli alakulása", "line", [50, 150, 100, 250, 880], ["Hét 1", "Hét 2", "Hét 3", "Hét 4", "Hét 5"]))
         charts_container_layout.addWidget(self.create_chart("Edzők teljesítménye", "barh", [80, 90, 70, 95, 85], ["Edző 1", "Edző 2", "Edző 3", "Edző 4", "Edző 5"]))
-        charts_container_layout.addWidget(self.create_chart("Felhasználói aktivitás szórása", "scatter", np.random.rand(100) * 100, None, np.random.rand(100) * 100))
+        charts_container_layout.addWidget(self.create_chart("Felhasználói aktivitás szórása", "scatter", np.random.rand(100) * 100, np.random.rand(100) * 100))
 
         # Térköz hozzáadása a grafikonok között
         charts_container_layout.setSpacing(20)
@@ -195,6 +197,14 @@ class MainPage(QWidget):
 
         self.setLayout(main_layout)
 
+    def show_charts(self):
+        """Grafikonok megjelenítése."""
+        self.stacked_widget.setCurrentIndex(1)
+
+    def show_counters(self, event=None):
+        """Számlálók megjelenítése."""
+        self.stacked_widget.setCurrentIndex(0)
+
     def show_trainers(self):
         """Edzők listájának megjelenítése."""
         self.stacked_widget.setCurrentWidget(self.trainers_widget)
@@ -208,28 +218,82 @@ class MainPage(QWidget):
     def load_trainers(self):
         """Edzők adatainak betöltése és megjelenítése."""
         trainers = APIClient.get_trainers()
+        print("Edzők adatai a backendtől:", trainers)  # Hibakereséshez
         if trainers:
             self.display_data_in_table(trainers, self.trainers_layout, ["ID", "Név", "Település", "Specializáció", "Árkategória"])
+        else:
+            QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni az edzők adatait.")
 
     def load_users(self):
         """Felhasználók adatainak betöltése és megjelenítése."""
         users = APIClient.get_users()
+        print("Felhasználók adatai a backendtől:", users)  # Hibakereséshez
         if users:
             self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"])
+        else:
+            QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni a felhasználók adatait.")
 
     def display_data_in_table(self, data, layout, headers):
         """Adatok megjelenítése táblázatban."""
-        # Táblázat létrehozása
         table = QTableWidget()
         table.setRowCount(len(data))
-        table.setColumnCount(len(headers))
-        table.setHorizontalHeaderLabels(headers)
+        table.setColumnCount(len(headers) + 2)  # +2 a törlés és módosítás gombok miatt
+        table.setHorizontalHeaderLabels(headers + ["Törlés", "Módosítás"])
 
-        # Adatok feltöltése a táblázatba
         for row_idx, row_data in enumerate(data):
             for col_idx, header in enumerate(headers):
-                item = QTableWidgetItem(str(row_data.get(header.lower(), "")))
+                # Az oszlopok neveit kisbetűssé alakítjuk, hogy megfeleljenek a JSON kulcsoknak
+                key = header.lower()
+                if key == "név":  # Ha az oszlop neve "Név", akkor a "full_name" mezőt használjuk
+                    key = "full_name"
+                elif key == "életkor":  # Ha az oszlop neve "Életkor", akkor az "age" mezőt használjuk
+                    key = "age"
+                elif key == "e-mail":  # Ha az oszlop neve "E-mail", akkor az "email" mezőt használjuk
+                    key = "email"
+                elif key == "település":  # Ha az oszlop neve "Település", akkor a "location" mezőt használjuk
+                    key = "location"
+                elif key == "specializáció":  # Ha az oszlop neve "Specializáció", akkor a "specialization" mezőt használjuk
+                    key = "specialization"
+                elif key == "árkategória":  # Ha az oszlop neve "Árkategória", akkor a "price_range" mezőt használjuk
+                    key = "price_range"
+                
+                # Az adat lekérése a JSON-ból
+                item = QTableWidgetItem(str(row_data.get(key, "")))
                 table.setItem(row_idx, col_idx, item)
+
+            # Törlés gomb hozzáadása minden sorhoz
+            delete_button = QPushButton("Törlés")
+            delete_button.setStyleSheet("""
+                QPushButton {
+                    background-color: red;
+                    color: white;
+                    font-size: 14px;
+                    padding: 5px;
+                    border-radius: 5px;
+                }
+                QPushButton:hover {
+                    background-color: darkred;
+                }
+            """)
+            delete_button.clicked.connect(lambda _, row=row_idx: self.delete_item(data[row]["id"], "trainer" if headers[0] == "ID" else "user"))
+            table.setCellWidget(row_idx, len(headers), delete_button)
+
+            # Módosítás gomb hozzáadása minden sorhoz
+            edit_button = QPushButton("Módosítás")
+            edit_button.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    padding: 5px;
+                    border-radius: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            edit_button.clicked.connect(lambda _, row=row_idx: self.edit_item(data[row]["id"], "trainer" if headers[0] == "ID" else "user"))
+            table.setCellWidget(row_idx, len(headers) + 1, edit_button)
 
         # Táblázat formázása
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -258,7 +322,123 @@ class MainPage(QWidget):
         # Táblázat hozzáadása a layouthoz
         layout.addWidget(table)
 
-    # ... (a többi metódus változatlan marad)
+    def delete_item(self, item_id, item_type):
+        """Elem törlése az adatbázisból."""
+        if item_type == "trainer":
+            success = APIClient.delete_trainer(item_id)
+        else:
+            success = APIClient.delete_user(item_id)
+
+        if success:
+            QMessageBox.information(self, "Siker", "Elem sikeresen törölve.")
+            if item_type == "trainer":
+                self.load_trainers()
+            else:
+                self.load_users()
+        else:
+            QMessageBox.warning(self, "Hiba", "Nem sikerült törölni az elemet.")
+
+    def edit_item(self, item_id, item_type):
+        """Elem szerkesztése."""
+        if item_type == "trainer":
+            # Betöltjük az edző adatait
+            trainer_data = APIClient.get_trainer(item_id)
+            if trainer_data:
+                self.open_edit_window(trainer_data, "trainer")
+            else:
+                QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni az edző adatait.")
+        elif item_type == "user":
+            # Betöltjük a felhasználó adatait
+            user_data = APIClient.get_user(item_id)
+            if user_data:
+                self.open_edit_window(user_data, "user")
+            else:
+                QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni a felhasználó adatait.")
+        else:
+            QMessageBox.warning(self, "Hiba", "Ismeretlen elem típus.")
+
+    def open_edit_window(self, data, item_type):
+        """A szerkesztő ablak megnyitása QDialog-ként, dinamikus mezőkkel."""
+        edit_dialog = QDialog(self)  # A főablakot beállítjuk szülőnek
+        edit_dialog.setWindowTitle("Szerkesztés")
+        edit_dialog.resize(1000, 800)  # Ablak mérete: 600x400 pixel
+        layout = QVBoxLayout()
+
+        # Mezők létrehozása a szerkesztéshez
+        self.edit_fields = {}  # Szótár a beviteli mezők tárolásához
+        for key, value in data.items():
+            if key == "id":  # Az ID-t nem szerkesztjük
+                continue
+            label = QLabel(key.capitalize())  # Mezőnév (pl. "Full Name")
+            label.setStyleSheet("font-size: 16px; color: white;")
+            layout.addWidget(label)
+
+            edit_field = QLineEdit(str(value))  # Mező értéke
+            edit_field.setStyleSheet("font-size: 16px; color: black; background-color: white;")
+            layout.addWidget(edit_field)
+            self.edit_fields[key] = edit_field  # Mező tárolása a szótárban
+
+        # Menti gomb
+        save_button = QPushButton("Mentés")
+        save_button.setStyleSheet("""
+            QPushButton {
+                background-color: orange;
+                color: black;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #ffb84d;
+            }
+        """)
+        save_button.clicked.connect(lambda: self.save_item(data["id"], item_type, self.get_edited_data()))
+        layout.addWidget(save_button)
+
+        # Bezárás gomb
+        cancel_button = QPushButton("Mégse")
+        cancel_button.setStyleSheet("""
+            QPushButton {
+                background-color: red;
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: darkred;
+            }
+        """)
+        cancel_button.clicked.connect(edit_dialog.close)
+        layout.addWidget(cancel_button)
+
+        edit_dialog.setLayout(layout)
+        edit_dialog.exec_()  # Modális ablakként megjelenítjük
+        
+    def get_edited_data(self):
+        """Összegyűjti az összes szerkesztett adatot a mezőkből."""
+        edited_data = {}
+        for key, edit_field in self.edit_fields.items():
+            edited_data[key] = edit_field.text()  # Szöveg beolvasása a mezőből
+        return edited_data
+
+    def save_item(self, item_id, item_type, new_data):
+        """Elem mentése az adatbázisban."""
+        if item_type == "trainer":
+            success = APIClient.update_trainer(item_id, new_data)
+        else:
+            success = APIClient.update_user(item_id, new_data)
+
+        if success:
+            QMessageBox.information(self, "Siker", "Elem sikeresen frissítve.")
+            if item_type == "trainer":
+                self.load_trainers()
+            else:
+                self.load_users()
+        else:
+            QMessageBox.warning(self, "Hiba", "Nem sikerült frissíteni az elemet.")
 
     def colorize_icon(self, image_path, color):
         """Színmódosított QPixmap készítése az ikonokból."""
@@ -272,7 +452,7 @@ class MainPage(QWidget):
                     image.setPixelColor(x, y, color)
 
         return QPixmap.fromImage(image)
-
+    
     def create_chart(self, title, chart_type, data, labels=None, y_data=None):
         """Grafikon generálása a megadott típus szerint."""
         fig = Figure(figsize=(10, 5))  # Nagyobb méret a jobb láthatóság érdekében
@@ -288,6 +468,14 @@ class MainPage(QWidget):
         elif chart_type == "barh":
             ax.barh(labels, data, color="orange")
         elif chart_type == "scatter":
+            # Ha y_data nincs megadva, létrehozunk egy azonos méretű tömböt
+            if y_data is None:
+                y_data = np.zeros_like(data)
+            # Győződjünk meg róla, hogy data és y_data azonos hosszúságúak legyenek:
+            if len(data) != len(y_data):
+                min_length = min(len(data), len(y_data))
+                data = data[:min_length]
+                y_data = y_data[:min_length]
             ax.scatter(data, y_data, color="orange", s=50)
 
         ax.set_title(title, color="orange", fontsize=16)
@@ -330,14 +518,6 @@ class MainPage(QWidget):
         else:
             animation.setEndValue(QRect(rect.x() + 10, rect.y() + 10, rect.width() - 20, rect.height() - 20))
         animation.start()
-
-    def show_charts(self):
-        """Grafikonok megjelenítése."""
-        self.stacked_widget.setCurrentIndex(1)
-
-    def show_counters(self, event):
-        """Számlálók megjelenítése."""
-        self.stacked_widget.setCurrentIndex(0)
 
     def build_permissions_page(self):
         """Létrehozza a profilok listáját a jogosultságok oldalon."""
@@ -447,8 +627,7 @@ class MainPage(QWidget):
         hours_label.setAlignment(Qt.AlignCenter)
         hours_label.setStyleSheet("font-size: 20px; color: white;")
         
-        # Vissza gomb, hogy viss
-	            # Vissza gomb, hogy vissza menjünk a profilok oldalára
+        # Vissza gomb, hogy vissza menjünk a profilok oldalára
         back_button = QPushButton("Vissza")
         back_button.setStyleSheet("""
             QPushButton {
@@ -482,14 +661,12 @@ class MainPage(QWidget):
         """Visszatérés a profilok listájához."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
 
-
     def logout(self):
         """Kijelentkezés logika - visszadob a login oldalra."""
         self.close()  # Aktuális ablak bezárása
         from login_window import LoginWindow  # Késleltetett importálás a körkörös import elkerülésére
         self.login_window = LoginWindow()  # Új login ablak megnyitása  
         self.login_window.show()
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
