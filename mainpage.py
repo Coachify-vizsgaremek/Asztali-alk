@@ -1,10 +1,11 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem, QSizePolicy, QStackedWidget, QScrollArea
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem, QSizePolicy, QStackedWidget, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
+from api_client import APIClient  # Importáljuk az APIClient osztályt
 
 class MainPage(QWidget):
     def __init__(self):
@@ -94,6 +95,10 @@ class MainPage(QWidget):
                 button.clicked.connect(self.logout)
             elif button_text == "Grafikonok":
                 button.clicked.connect(self.show_charts)
+            elif button_text == "Edzők":
+                button.clicked.connect(self.show_trainers)  # Edzők gomb eseménykezelője
+            elif button_text == "Felhasználók":
+                button.clicked.connect(self.show_users)  # Felhasználók gomb eseménykezelője
             elif button_text == "Jogosultságok":
                 button.clicked.connect(self.show_permissions)
             nav_bar_layout.addWidget(button)
@@ -163,6 +168,18 @@ class MainPage(QWidget):
         self.build_permissions_page()  # Létrehozza a profilok listáját
         self.stacked_widget.addWidget(self.permissions_widget)
 
+        # 4. Oldal: Edzők listája
+        self.trainers_widget = QWidget()
+        self.trainers_layout = QVBoxLayout()
+        self.trainers_widget.setLayout(self.trainers_layout)
+        self.stacked_widget.addWidget(self.trainers_widget)
+
+        # 5. Oldal: Felhasználók listája
+        self.users_widget = QWidget()
+        self.users_layout = QVBoxLayout()
+        self.users_widget.setLayout(self.users_layout)
+        self.stacked_widget.addWidget(self.users_widget)
+
         # Alapértelmezett oldal: Számlálók
         self.stacked_widget.setCurrentIndex(0)
 
@@ -177,6 +194,71 @@ class MainPage(QWidget):
         main_layout.addWidget(main_content)
 
         self.setLayout(main_layout)
+
+    def show_trainers(self):
+        """Edzők listájának megjelenítése."""
+        self.stacked_widget.setCurrentWidget(self.trainers_widget)
+        self.load_trainers()
+
+    def show_users(self):
+        """Felhasználók listájának megjelenítése."""
+        self.stacked_widget.setCurrentWidget(self.users_widget)
+        self.load_users()
+
+    def load_trainers(self):
+        """Edzők adatainak betöltése és megjelenítése."""
+        trainers = APIClient.get_trainers()
+        if trainers:
+            self.display_data_in_table(trainers, self.trainers_layout, ["ID", "Név", "Település", "Specializáció", "Árkategória"])
+
+    def load_users(self):
+        """Felhasználók adatainak betöltése és megjelenítése."""
+        users = APIClient.get_users()
+        if users:
+            self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"])
+
+    def display_data_in_table(self, data, layout, headers):
+        """Adatok megjelenítése táblázatban."""
+        # Táblázat létrehozása
+        table = QTableWidget()
+        table.setRowCount(len(data))
+        table.setColumnCount(len(headers))
+        table.setHorizontalHeaderLabels(headers)
+
+        # Adatok feltöltése a táblázatba
+        for row_idx, row_data in enumerate(data):
+            for col_idx, header in enumerate(headers):
+                item = QTableWidgetItem(str(row_data.get(header.lower(), "")))
+                table.setItem(row_idx, col_idx, item)
+
+        # Táblázat formázása
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setStyleSheet("""
+            QTableWidget {
+                background-color: #222;
+                color: white;
+                font-size: 16px;
+                border: 1px solid orange;
+            }
+            QHeaderView::section {
+                background-color: orange;
+                color: black;
+                font-weight: bold;
+                padding: 10px;
+            }
+        """)
+
+        # Régi widgetek törlése a layoutból
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+        # Táblázat hozzáadása a layouthoz
+        layout.addWidget(table)
+
+    # ... (a többi metódus változatlan marad)
 
     def colorize_icon(self, image_path, color):
         """Színmódosított QPixmap készítése az ikonokból."""
