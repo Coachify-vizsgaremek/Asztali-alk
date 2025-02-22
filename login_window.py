@@ -1,78 +1,14 @@
+# login_window.py
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QSpacerItem,
                              QSizePolicy, QHBoxLayout, QLineEdit, QPushButton, QMessageBox)
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QPalette, QBrush
 from mainpage import MainPage  # MainPage importálása
-
-class LoadingScreen(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Loading")
-        self.showFullScreen()
-        self.setStyleSheet("background-color: black;")
-
-        layout = QVBoxLayout()
-        self.label = QLabel("", self)
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("font-size: 120px; color: orange; font-weight: bold;")
-        layout.addWidget(self.label)
-
-        self.logo = QLabel(self)
-        self.logo.setAlignment(Qt.AlignCenter)
-        self.logo.setPixmap(QPixmap("logo.jpg").scaledToWidth(200))
-        self.logo.setVisible(False)
-        layout.addWidget(self.logo)
-
-        self.slogan_label = QLabel("Edzők, akik érted dolgoznak.", self)
-        self.slogan_label.setAlignment(Qt.AlignCenter)
-        self.slogan_label.setStyleSheet("font-size: 30px; color: white; margin-top: 20px;")
-        self.slogan_label.setVisible(False)
-        layout.addWidget(self.slogan_label)
-
-        self.setLayout(layout)
-        self.counter = 0
-        self.logo_animation = None
-        self.login_animation = None
-
-        QTimer.singleShot(100, self.show_text)
-
-    def show_text(self):
-        if self.counter < len("COACHIFY"):
-            self.label.setText("COACHIFY"[:self.counter + 1])
-            self.counter += 1
-            QTimer.singleShot(150, self.show_text)
-        else:
-            self.show_logo()
-
-    def show_logo(self):
-        self.logo.setVisible(True)
-        self.logo_animation = QPropertyAnimation(self.logo, b"windowOpacity")
-        self.logo_animation.setDuration(1000)
-        self.logo_animation.setStartValue(0)
-        self.logo_animation.setEndValue(1)
-        self.logo_animation.start()
-        QTimer.singleShot(500, self.show_slogan)
-
-    def show_slogan(self):
-        self.slogan_label.setVisible(True)
-        QTimer.singleShot(1500, self.open_login)
-
-    def open_login(self):
-        self.login_window = LoginWindow()
-        self.login_window.setWindowOpacity(0)
-        self.login_window.show()
-
-        self.login_animation = QPropertyAnimation(self.login_window, b"windowOpacity")
-        self.login_animation.setDuration(1000)
-        self.login_animation.setStartValue(0)
-        self.login_animation.setEndValue(1)
-        self.login_animation.start()
-
-        self.close()
+from loading_screen import LoadingScreen  # LoadingScreen importálása
 
 class LoginWindow(QWidget):
-    def __init__(self):
+    def __init__(self, initial_load=True):  # Új paraméter: initial_load
         super().__init__()
         self.setWindowTitle("COACHIFY - Admin Login")
         self.showFullScreen()
@@ -124,6 +60,20 @@ class LoginWindow(QWidget):
         self.setLayout(layout)
         self.set_background_image()
 
+        # Kezdő Loading Screen megjelenítése csak akkor, ha a program indul (initial_load=True)
+        if initial_load:
+            self.initial_loading_screen = LoadingScreen(show_logo=True, show_text=True)
+            self.initial_loading_screen.show()
+            QTimer.singleShot(3000, self.show_login_window)
+        else:
+            self.show()  # Ha kijelentkezés után jelenik meg, akkor azonnal megjelenik a login ablak
+
+    def show_login_window(self):
+        """Login ablak megjelenítése a kezdő loading screen után."""
+        if hasattr(self, 'initial_loading_screen'):
+            self.initial_loading_screen.close()
+        self.show()
+                
     def set_background_image(self):
         self.setAutoFillBackground(True)
         pixmap = QPixmap("elso.jpg").scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
@@ -135,15 +85,29 @@ class LoginWindow(QWidget):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        if username == "admin" and password == "admin":
+        # Ellenőrizzük a felhasználónevet és a jelszót
+        if (username == "admin1" and password == "admin1") or \
+           (username == "admin2" and password == "admin2") or \
+           (username == "admin3" and password == "admin3"):
             print("Bejelentkezés sikeres!")
-            self.open_main_page()
+            
+            # Bejelentkezett admin nevének meghatározása
+            admin_name = "Magda Ágoston" if username == "admin1" else \
+                         "Kaiser Móric" if username == "admin2" else \
+                         "Podhorányi Donát"
+            
+            # Bejelentkezés utáni loading screen megjelenítése
+            self.post_login_loading_screen = LoadingScreen(f"Üdv, {admin_name}", show_logo=True)
+            self.post_login_loading_screen.show()
             self.close()
+
+            # Főoldal megnyitása
+            QTimer.singleShot(2000, lambda: self.open_main_page(admin_name))
         else:
             self.show_error_message(username, password)
 
-    def open_main_page(self):
-        self.main_page = MainPage()
+    def open_main_page(self, admin_name):
+        self.main_page = MainPage(admin_name)
         self.main_page.show()
 
     def show_error_message(self, username, password):
@@ -163,6 +127,5 @@ class LoginWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    loading_screen = LoadingScreen()
-    loading_screen.show()
+    login_window = LoginWindow()  # A program indulásakor a kezdő loading screen jelenik meg
     sys.exit(app.exec_())

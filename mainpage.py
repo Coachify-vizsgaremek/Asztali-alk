@@ -1,18 +1,21 @@
+# mainpage.py
 import sys
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpacerItem,
-    QSizePolicy, QStackedWidget, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QLineEdit, QDialog
+    QSizePolicy, QStackedWidget, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QLineEdit, QDialog, QFrame
 )
-from PyQt5.QtCore import Qt, QPropertyAnimation, QRect
+from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from api_client import APIClient  # Importáljuk az APIClient osztályt
+from loading_screen import LoadingScreen  # LoadingScreen importálása
 
 class MainPage(QWidget):
-    def __init__(self):
+    def __init__(self, admin_name):
         super().__init__()
+        self.admin_name = admin_name  # Az admin nevének tárolása
         self.setWindowTitle("Main Page")
         self.setGeometry(100, 100, 1200, 800)
         self.showFullScreen()
@@ -23,19 +26,43 @@ class MainPage(QWidget):
                 "image": "profilkepek/Agoston.jpg",
                 "phone": "+36 30 123 4567",
                 "email": "agoston@example.com",
-                "working_hours": "9:00 - 17:00"
+                "working_hours": "9:00 - 17:00",
+                "motivation": "Magda Ágoston, a Coachify weboldal fejlesztője, azért alapította a céget, hogy segítsen az embereknek egyszerűen és gyorsan megtalálni a számukra megfelelő személyi edzőt. Célja, hogy mindenki könnyen hozzáférhessen az egészséges életmódhoz és a személyre szabott edzésprogramokhoz.",
+                "role": "Weboldal fejlesztő",
+                "age": 35,
+                "gender": "Férfi",
+                "nationality": "Magyar",
+                "income": "1.500.000 HUF",
+                "username": "admin1",
+                "code": "admin1"
             },
             "Kaiser Móric": {
                 "image": "profilkepek/Moric.jpg",
                 "phone": "+36 30 234 5678",
                 "email": "moric@example.com",
-                "working_hours": "10:00 - 18:00"
+                "working_hours": "10:00 - 18:00",
+                "motivation": "Kaiser Móric, a Coachify mobilalkalmazás fejlesztője, azért jött létre a cég, hogy az emberek bárhol és bármikor hozzáférhessenek a személyi edzőikhez. Célja, hogy a mobilalkalmazás segítségével mindenki könnyedén kövesse az edzésprogramjait és elérje céljait.",
+                "role": "Mobilalkalmazás fejlesztő",
+                "age": 30,
+                "gender": "Férfi",
+                "nationality": "Magyar",
+                "income": "1.200.000 HUF",
+                "username": "admin2",
+                "code": "admin2"
             },
             "Podhorányi Donát": {
                 "image": "profilkepek/Donat.jpg",
                 "phone": "+36 30 345 6789",
                 "email": "donat@example.com",
-                "working_hours": "8:00 - 16:00"
+                "working_hours": "8:00 - 16:00",
+                "motivation": "Podhorányi Donát, a Coachify asztali alkalmazás fejlesztője, azért alapította a céget, hogy az emberek számára professzionális eszközöket biztosítson az edzésprogramok követésére. Célja, hogy az asztali alkalmazás segítségével mindenki hatékonyabban és szervezettebben tudjon edzeni.",
+                "role": "Asztali alkalmazás fejlesztő",
+                "age": 28,
+                "gender": "Férfi",
+                "nationality": "Magyar",
+                "income": "1.300.000 HUF",
+                "username": "admin3",
+                "code": "admin3"
             }
         }
 
@@ -551,6 +578,10 @@ class MainPage(QWidget):
                 margin-bottom: 10px;
             """)
 
+            # Animáció hozzáadása a profilképekhez
+            profile_pic.enterEvent = lambda event, widget=profile_pic: self.animate_profile_pic(widget, True)
+            profile_pic.leaveEvent = lambda event, widget=profile_pic: self.animate_profile_pic(widget, False)
+
             # Név
             name_label = QLabel(name)
             name_label.setAlignment(Qt.AlignCenter)
@@ -571,8 +602,6 @@ class MainPage(QWidget):
                     background-color: #ffb84d;
                 }
             """)
-            # A gomb kattintása esetén meghívjuk a show_profile_details metódust,
-            # átadva a profil nevét, így az adatokat a profiles_data dictionary-ből tudjuk majd lekérdezni.
             details_button.clicked.connect(lambda checked, name=name: self.show_profile_details(name))
 
             # Layout összerakása
@@ -584,79 +613,125 @@ class MainPage(QWidget):
 
         self.permissions_widget.setLayout(permissions_layout)
 
+    def animate_profile_pic(self, widget, enter):
+        """Animáció a profilképre, amikor az egér belép vagy kilép."""
+        animation = QPropertyAnimation(widget, b"geometry")
+        animation.setDuration(200)
+        rect = widget.geometry()
+        if enter:
+            animation.setEndValue(QRect(rect.x() - 5, rect.y() - 5, rect.width() + 10, rect.height() + 10))
+        else:
+            animation.setEndValue(QRect(rect.x() + 5, rect.y() + 5, rect.width() - 10, rect.height() - 10))
+        animation.start()
+        
     def show_permissions(self):
         """Megjeleníti a profilok listáját (jogosultságok oldalt)."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
 
     def show_profile_details(self, profile_name):
-        """Profil részleteket megjelenítő oldal létrehozása a megadott profilnév alapján."""
+        """Profil részleteket megjelenítő oldal létrehozása modern dizájnnal."""
         details_widget = QWidget()
-        layout = QVBoxLayout()
-
-        # Profil adatok lekérése a dictionary-ből
+        main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignTop)
+        
+        # Profil adatok lekérése
         data = self.profiles_data.get(profile_name, {})
         if not data:
             return
-
-        # Profilkép
+        
+        # Fő tartalom layout
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(30)
+        
+        # Felső rész - Kép és név
+        top_layout = QHBoxLayout()
+        
         profile_pic = QLabel()
-        pic = QPixmap(data["image"]).scaled(450, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        pic = QPixmap(data["image"]).scaled(250, 250, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
         profile_pic.setPixmap(pic)
-        profile_pic.setAlignment(Qt.AlignCenter)
-        profile_pic.setStyleSheet("""
-            border: 2px solid orange;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        """)
-
-        # Név
-        name_label = QLabel(profile_name)
-        name_label.setAlignment(Qt.AlignCenter)
-        name_label.setStyleSheet("font-size: 28px; font-weight: bold; color: orange; margin-bottom: 20px;")
-
-        # További információk
-        phone_label = QLabel(f"Telefonszám: {data['phone']}")
-        phone_label.setAlignment(Qt.AlignCenter)
-        phone_label.setStyleSheet("font-size: 20px; color: white;")
+        profile_pic.setStyleSheet("border: 5px solid orange; border-radius: 15px;")
         
-        email_label = QLabel(f"E-mail: {data['email']}")
-        email_label.setAlignment(Qt.AlignCenter)
-        email_label.setStyleSheet("font-size: 20px; color: white;")
+        name_role_layout = QVBoxLayout()
+        name_label = QLabel(f"{profile_name}")
+        name_label.setStyleSheet("font-size: 32px; font-weight: bold; color: orange;")
+        role_label = QLabel(f"<i>{data['role']}</i>")
+        role_label.setStyleSheet("font-size: 22px; color: lightgray;")
         
-        hours_label = QLabel(f"Munkaidő: {data['working_hours']}")
-        hours_label.setAlignment(Qt.AlignCenter)
-        hours_label.setStyleSheet("font-size: 20px; color: white;")
+        name_role_layout.addWidget(name_label)
+        name_role_layout.addWidget(role_label)
         
-        # Vissza gomb, hogy vissza menjünk a profilok oldalára
+        top_layout.addWidget(profile_pic)
+        top_layout.addLayout(name_role_layout)
+        top_layout.addStretch()
+        
+        # Középső rész - Adatok két oszlopban
+        middle_layout = QHBoxLayout()
+        left_data_layout = QVBoxLayout()
+        right_data_layout = QVBoxLayout()
+        
+        data_fields = {
+            "Kor": data["age"],
+            "Nem": data["gender"],
+            "Nemzetiség": data["nationality"],
+            "Jövedelem": data["income"],
+            "E-mail": data["email"],
+            "Telefonszám": data["phone"],
+            "Felhasználónév": data["username"],
+            "Kód": data["code"]
+        }
+        
+        for index, (key, value) in enumerate(data_fields.items()):
+            label = QLabel(f"<b>{key}:</b> {value}")
+            label.setStyleSheet("font-size: 20px; color: white;")
+            if index % 2 == 0:
+                left_data_layout.addWidget(label)
+            else:
+                right_data_layout.addWidget(label)
+        
+        middle_layout.addLayout(left_data_layout)
+        middle_layout.addLayout(right_data_layout)
+        
+        # Motivációs szöveg kiemeléssel
+        motivation_label = QLabel(data["motivation"])
+        motivation_label.setWordWrap(True)
+        motivation_label.setStyleSheet(
+            "font-size: 20px; color: white; background-color: rgba(255,255,255,0.2);"
+            "padding: 15px; border-radius: 10px; font-style: italic;"
+        )
+        
+        # Vissza gomb animációval
         back_button = QPushButton("Vissza")
-        back_button.setStyleSheet("""
-            QPushButton {
-                background-color: orange;
-                color: black;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 8px 16px;
-                border-radius: 8px;
-            }
-            QPushButton:hover {
-                background-color: #ffb84d;
-            }
-        """)
+        back_button.setStyleSheet(
+            "background-color: orange; font-size: 18px; padding: 12px; border-radius: 10px;"
+            "transition: background-color 0.3s ease-in-out;"
+        )
+        back_button.setCursor(Qt.PointingHandCursor)
         back_button.clicked.connect(self.back_to_permissions)
-
-        # Elek elrendezése
-        layout.addWidget(profile_pic)
-        layout.addWidget(name_label)
-        layout.addWidget(phone_label)
-        layout.addWidget(email_label)
-        layout.addWidget(hours_label)
-        layout.addWidget(back_button)
-        details_widget.setLayout(layout)
-
-        # Az új oldalt hozzáadjuk a stacked widget-hez, majd megjelenítjük
+        
+        # Layout összerakása
+        content_layout.addLayout(top_layout)
+        content_layout.addLayout(middle_layout)
+        content_layout.addWidget(motivation_label)
+        content_layout.addWidget(back_button, alignment=Qt.AlignCenter)
+        
+        main_layout.addLayout(content_layout)
+        details_widget.setLayout(main_layout)
+        
         self.stacked_widget.addWidget(details_widget)
         self.stacked_widget.setCurrentWidget(details_widget)
 
+        
+    def animate_button(self, button, enter):
+        """Animáció a gombra, amikor az egér belép vagy kilép."""
+        animation = QPropertyAnimation(button, b"geometry")
+        animation.setDuration(200)
+        rect = button.geometry()
+        if enter:
+            animation.setEndValue(QRect(rect.x() - 5, rect.y() - 5, rect.width() + 10, rect.height() + 10))
+        else:
+            animation.setEndValue(QRect(rect.x() + 5, rect.y() + 5, rect.width() - 10, rect.height() - 10))
+        animation.start()
+        
     def back_to_permissions(self):
         """Visszatérés a profilok listájához."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
@@ -664,12 +739,23 @@ class MainPage(QWidget):
     def logout(self):
         """Kijelentkezés logika - visszadob a login oldalra."""
         self.close()  # Aktuális ablak bezárása
+
+        # Animált loading screen létrehozása
+        self.loading_screen = LoadingScreen("Kijelentkezés...")
+        self.loading_screen.show()
+
+        # Timer beállítása a login ablak újramegjelenítéséhez
+        QTimer.singleShot(2000, self.show_login_window)
+
+    def show_login_window(self):
+        """Login ablak újramegjelenítése."""
         from login_window import LoginWindow  # Késleltetett importálás a körkörös import elkerülésére
-        self.login_window = LoginWindow()  # Új login ablak megnyitása  
+        self.login_window = LoginWindow(initial_load=False)  # Új login ablak megnyitása, de nem kezdeti betöltés
         self.login_window.show()
+        self.loading_screen.close()  # Loading screen bezárása
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainPage()
+    window = MainPage("Magda Ágoston")  # Példa admin névvel
     window.show()
     sys.exit(app.exec_())
