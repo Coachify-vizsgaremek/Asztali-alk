@@ -1,7 +1,7 @@
 # login_window.py
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QSpacerItem,
-                             QSizePolicy, QHBoxLayout, QLineEdit, QPushButton, QMessageBox)
+                             QSizePolicy, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QFrame)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QPalette, QBrush
 from mainpage import MainPage  # MainPage importálása
@@ -13,51 +13,79 @@ class LoginWindow(QWidget):
         self.setWindowTitle("COACHIFY - Admin Login")
         self.showFullScreen()
 
-        layout = QVBoxLayout()
+        # Fő layout
+        main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignTop)
+
+        # COACHIFY felirat
         self.label = QLabel("COACHIFY", self)
         self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("font-size: 120px; color: orange; font-weight: bold;")
-        layout.addWidget(self.label)
+        self.label.setStyleSheet("font-size: 150px; color: orange; font-weight: bold; margin-top: 150px;")
+        main_layout.addWidget(self.label)
 
-        self.admin_label = QLabel("(ADMIN felület)", self)
-        self.admin_label.setAlignment(Qt.AlignCenter)
-        self.admin_label.setStyleSheet("font-size: 20px; color: white;")
-        layout.addWidget(self.admin_label)
-
+        # Szlogen
         self.slogan = QLabel("Edzők, akik érted dolgoznak.", self)
         self.slogan.setAlignment(Qt.AlignCenter)
-        self.slogan.setStyleSheet("font-size: 40px; color: white; margin-bottom: 40px;")
-        layout.addWidget(self.slogan)
+        self.slogan.setStyleSheet("font-size: 60px; color: white; margin-bottom: 30px;")
+        main_layout.addWidget(self.slogan)
 
-        layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        # Login box középre helyezése
+        self.login_panel = QFrame(self)
+        self.login_panel.setStyleSheet("""
+            QFrame {
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                padding: 20px;
+            }
+        """)
+        self.login_panel.setFixedSize(400, 300)
+        
+        panel_layout = QVBoxLayout(self.login_panel)
+        panel_layout.setAlignment(Qt.AlignCenter)
 
-        self.username_input = QLineEdit(self)
+        self.username_input = QLineEdit(self.login_panel)
         self.username_input.setPlaceholderText("Felhasználónév")
         self.username_input.setStyleSheet(self._input_style())
-        layout.addWidget(self.username_input)
+        panel_layout.addWidget(self.username_input)
 
-        self.password_input = QLineEdit(self)
+        self.password_input = QLineEdit(self.login_panel)
         self.password_input.setPlaceholderText("Jelszó")
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setStyleSheet(self._input_style())
-        layout.addWidget(self.password_input)
+        panel_layout.addWidget(self.password_input)
 
-        self.login_button = QPushButton("Bejelentkezés", self)
+        self.login_button = QPushButton("Bejelentkezés", self.login_panel)
         self.login_button.setStyleSheet(self._button_style())
         self.login_button.clicked.connect(self.login)
-        layout.addWidget(self.login_button)
+        panel_layout.addWidget(self.login_button)
 
-        layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        # Login panel középre igazítása
+        main_layout.addStretch()
+        main_layout.addWidget(self.login_panel, alignment=Qt.AlignCenter)
+        main_layout.addStretch()
 
-        close_button_container = QHBoxLayout()
+        # Bezárás gomb jobb felső sarokba
+        close_button_layout = QHBoxLayout()
         self.close_button = QPushButton("X", self)
-        self.close_button.setStyleSheet("background-color: rgba(255, 69, 0, 0.5); color: white; font-size: 18px; border: none; border-radius: 5px;")
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 69, 0, 0.5);
+                color: white;
+                font-size: 18px;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 69, 0, 0.8);
+            }
+        """)
         self.close_button.setFixedSize(40, 40)
         self.close_button.clicked.connect(self.close)
-        close_button_container.addWidget(self.close_button, alignment=Qt.AlignLeft)
-        layout.addLayout(close_button_container)
+        close_button_layout.addWidget(self.close_button, alignment=Qt.AlignRight)
+        main_layout.addLayout(close_button_layout)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout)
         self.set_background_image()
 
         # Kezdő Loading Screen megjelenítése csak akkor, ha a program indul (initial_load=True)
@@ -119,11 +147,37 @@ class LoginWindow(QWidget):
 
     @staticmethod
     def _input_style():
-        return "background-color: rgba(255, 255, 255, 0.8); color: #333; padding: 15px; border-radius: 10px; font-size: 18px; margin: 10px; width: 300px;"
+        return """
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.8);
+                color: #333;
+                padding: 15px;
+                border-radius: 10px;
+                font-size: 18px;
+                margin: 10px;
+                width: 300px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            QLineEdit:hover {
+                border: 1px solid rgba(255, 255, 255, 0.8);
+            }
+        """
 
     @staticmethod
     def _button_style():
-        return "QPushButton { background-color: orange; color: white; font-size: 20px; padding: 15px 30px; border-radius: 10px; } QPushButton:hover { background-color: rgba(255, 69, 0, 0.8); }"
+        return """
+            QPushButton {
+                background-color: orange;
+                color: white;
+                font-size: 20px;
+                padding: 15px 30px;
+                border-radius: 10px;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 69, 0, 0.8);
+            }
+        """
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
