@@ -9,9 +9,191 @@ from PyQt5.QtGui import QPixmap, QIcon, QColor, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
+import matplotlib.pyplot as plt
 from api_client import APIClient  # Importáljuk az APIClient osztályt
 from loading_screen import LoadingScreen  # LoadingScreen importálása
 
+class StatsPage(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Grafikonok")
+        layout = QVBoxLayout(self)  # Fő layout a StatsPage-hez
+        layout.setContentsMargins(10, 10, 10, 10)  # Margók beállítása
+
+        # Görgethető terület létrehozása
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)  # A tartalom automatikusan átméreteződik
+
+        # Tartalom widget létrehozása
+        self.scroll_content = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_content)  # Layout a tartalomhoz
+        self.scroll_layout.setAlignment(Qt.AlignTop)  # Tartalom fentről kezdődik
+        self.scroll_layout.setSpacing(30)  # Térköz a grafikonok között
+
+        # A tartalom widget minimum méretének beállítása
+        self.scroll_content.setMinimumSize(1000, 2500)  # Nagyobb méret, hogy görgethető legyen
+
+        # Adatok frissítése időzítővel
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_charts)
+        self.timer.start(3000)  # 3 másodpercenként frissít
+
+        # Kezdeti adatok betöltése
+        self.update_charts()
+
+        # Tartalom hozzáadása a görgethető területhez
+        scroll_area.setWidget(self.scroll_content)
+
+        # Görgethető terület hozzáadása a fő layouthoz
+        layout.addWidget(scroll_area)
+
+    def update_charts(self):
+        """Adatok frissítése és grafikonok újrarajzolása."""
+        # Töröljük a korábbi tartalmat
+        for i in reversed(range(self.scroll_layout.count())):
+            self.scroll_layout.itemAt(i).widget().setParent(None)
+
+        # Adatok lekérése
+        users = APIClient.get_users()
+        trainers = APIClient.get_trainers()
+
+        if not users or not trainers:
+            QMessageBox.warning(self, "Hiba", "Nincsenek adatok a grafikonok megjelenítéséhez.")
+            return
+
+        # Életkor szerinti megoszlás (hisztogram)
+        ages = [user['age'] for user in users]
+        self.add_histogram(self.scroll_layout, ages, "Felhasználók életkora")
+
+        # Edzők specializációja (annotált nyilakkal)
+        specializations = {}
+        for trainer in trainers:
+            spec = trainer.get('specialization', 'Nincs megadva')
+            specializations[spec] = specializations.get(spec, 0) + 1
+        self.add_pie_chart(self.scroll_layout, list(specializations.keys()), list(specializations.values()), "Edzők specializációja")
+
+        # Edzők árkategóriái (oszlopdiagram)
+        price_ranges = {}
+        for trainer in trainers:
+            price = trainer.get('price_range', 'Nincs megadva')
+            price_ranges[price] = price_ranges.get(price, 0) + 1
+        self.add_bar_chart(self.scroll_layout, list(price_ranges.keys()), list(price_ranges.values()), "Edzők árkategóriái")
+
+    def add_pie_chart(self, layout, labels, sizes, title):
+        """Annotált nyilakkal ellátott grafikus megoldás."""
+        fig, ax = plt.subplots(figsize=(10, 8))  # Nagyobb méret a grafikus megoldáshoz
+        fig.patch.set_facecolor('#222')  # Háttérszín beállítása
+        ax.set_facecolor('#222')  # Háttérszín beállítása
+
+        # Színek dinamikus generálása (6 különböző szín)
+        colors = plt.cm.tab20.colors[:len(labels)]  # Csak annyi szín, ahány spec van
+
+        # Kör alaprajz (csak dekoráció)
+        circle = plt.Circle((0, 0), 1, color='#333', fill=False, linewidth=2)
+        ax.add_artist(circle)
+
+        # Szövegek és nyilak elhelyezése
+        total = sum(sizes)
+        angles = [size / total * 360 for size in sizes]  # Szögek kiszámítása
+        start_angle = 0
+
+        for i, (label, size, color) in enumerate(zip(labels, sizes, colors)):
+            # Szöveg pozíciója
+            angle = start_angle + angles[i] / 2  # Középszög
+            x = np.cos(np.deg2rad(angle))  # X koordináta
+            y = np.sin(np.deg2rad(angle))  # Y koordináta
+
+            # Szöveg hozzáadása (körön kívül, egyenletes elosztással)
+            text_distance = 1.3  # Szöveg távolsága a középponttól
+            text = ax.text(
+                x * text_distance, y * text_distance, label,  # Szöveg pozíciója
+                fontsize=14, color='white', fontweight='bold', ha='center', va='center'
+            )
+
+            # Nyíl kezdete a szöveg szélétől (logikusan elhelyezve)
+            bbox = text.get_window_extent(renderer=fig.canvas.get_renderer())  # Szöveg mérete
+            bbox_coords = ax.transData.inverted().transform(bbox)  # Koordináták átalakítása
+
+            if x > 0:  # Jobb oldalon lévő szövegek
+                arrow_start_x = bbox_coords[0, 0]  # Szöveg bal széle
+            else:  # Bal oldalon lévő szövegek
+                arrow_start_x = bbox_coords[1, 0]  # Szöveg jobb széle
+
+            if y > 0:  # Felső részben lévő szövegek
+                arrow_start_y = bbox_coords[1, 1]  # Szöveg alja
+            else:  # Alsó részben lévő szövegek
+                arrow_start_y = bbox_coords[0, 1]  # Szöveg teteje
+
+            # Nyíl rajzolása (a szöveg szélétől indul)
+            arrow_end_distance = 1.5  # Nyíl vége a százalékhoz
+            ax.annotate(
+                '',  # Nincs szöveg a nyílon
+                xy=(x * arrow_end_distance, y * arrow_end_distance),  # Nyíl vége
+                xytext=(arrow_start_x, arrow_start_y),  # Nyíl kezdete (szöveg szélétől)
+                arrowprops=dict(arrowstyle='->', color=color, lw=2),  # Nyíl stílusa
+            )
+
+            # Százalék hozzáadása a nyíl végére
+            ax.text(
+                x * (arrow_end_distance + 0.1), y * (arrow_end_distance + 0.1), f'{size / total * 100:.1f}%',  # Százalék pozíciója
+                fontsize=12, color=color, fontweight='bold', ha='center', va='center'
+            )
+
+            # Kör színezése arányosan az adatokkal
+            wedge_angle = angles[i]
+            wedge_start = start_angle
+            wedge = plt.Circle((0, 0), 1.05, color=color, alpha=0.3, transform=ax.transData)  # Átlátszó színezés
+            ax.add_artist(wedge)
+
+            start_angle += angles[i]  # Következő szög
+
+        # Tengelyek eltüntetése
+        ax.set_xlim(-2, 2)
+        ax.set_ylim(-2, 2)
+        ax.axis('off')
+
+        # Cím hozzáadása
+        ax.set_title(title, color="orange", fontsize=16, pad=20)
+
+        # Canvas hozzáadása a layouthoz
+        canvas = FigureCanvas(fig)
+        layout.addWidget(canvas)
+        
+
+    def add_histogram(self, layout, data, title):
+        """Hisztogram hozzáadása."""
+        fig, ax = plt.subplots(figsize=(10, 6))  # Nagyobb méret a hisztogramnak
+        ax.hist(data, bins=10, color='orange', edgecolor='black')
+        ax.set_title(title, color="orange", fontsize=16, pad=20)  # Cím stílusa
+        ax.set_facecolor("#222")  # Háttérszín beállítása
+        fig.patch.set_facecolor("#222")  # Háttérszín beállítása
+        ax.tick_params(colors="white")  # Tengelyek szövegének színe
+        ax.grid(color="gray", linestyle="--", linewidth=0.5)  # Rács stílusa
+        canvas = FigureCanvas(fig)
+        layout.addWidget(canvas)
+
+    def add_bar_chart(self, layout, labels, values, title):
+        """Oszlopdiagram hozzáadása."""
+        fig, ax = plt.subplots(figsize=(10, 6))  # Nagyobb méret az oszlopdiagramnak
+
+        # Alsó margó növelése, hogy az "ár HUF/óra" feliratok láthatóak legyenek
+        fig.subplots_adjust(bottom=0.3)
+
+        ax.bar(labels, values, color='orange')
+        ax.set_title(title, color="orange", fontsize=16, pad=20)  # Cím stílusa
+
+        # X tengely szövegeinek elhelyezése
+        ax.set_xticks(range(len(labels)))  # X tengely pozíciók
+        ax.set_xticklabels(labels, rotation=45, ha='right', color='white', fontsize=12)  # Szöveg stílusa
+
+        ax.set_facecolor("#222")  # Háttérszín beállítása
+        fig.patch.set_facecolor("#222")  # Háttérszín beállítása
+        ax.tick_params(colors="white")  # Tengelyek szövegének színe
+        ax.grid(color="gray", linestyle="--", linewidth=0.5)  # Rács stílusa
+        canvas = FigureCanvas(fig)
+        layout.addWidget(canvas)
+        
+        
 class MainPage(QWidget):
     def __init__(self, admin_name):
         super().__init__()
@@ -84,7 +266,7 @@ class MainPage(QWidget):
         pixmap = QPixmap("logo.jpg")
         self.logo_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.logo_label.setAlignment(Qt.AlignCenter)
-        self.logo_label.mousePressEvent = lambda event: self.show_counters(event)  # Logóra kattintás eseménykezelő
+        self.logo_label.mousePressEvent = lambda event: self.show_counters(event)
         nav_bar_layout.addWidget(self.logo_label)
 
         # Spacer a logó és menüpontok között (lejjebb tolás)
@@ -125,9 +307,9 @@ class MainPage(QWidget):
             elif button_text == "Grafikonok":
                 button.clicked.connect(self.show_charts)
             elif button_text == "Edzők":
-                button.clicked.connect(self.show_trainers)  # Edzők gomb eseménykezelője
+                button.clicked.connect(self.show_trainers)
             elif button_text == "Felhasználók":
-                button.clicked.connect(self.show_users)  # Felhasználók gomb eseménykezelője
+                button.clicked.connect(self.show_users)
             elif button_text == "Jogosultságok":
                 button.clicked.connect(self.show_permissions)
             nav_bar_layout.addWidget(button)
@@ -150,9 +332,10 @@ class MainPage(QWidget):
         main_label.setStyleSheet("font-size: 40px; color: orange; margin-top: 30px;")
         counters_layout.addWidget(main_label)
 
-        self.user_counter = self.create_counter("1430", "Felhasználók")
-        self.coach_counter = self.create_counter("865", "Edzők")
-        self.client_counter = self.create_counter("565", "Kliensek")
+        # Számlálók inicializálása valós adatokkal
+        self.user_counter = self.create_counter("0", "Felhasználók")
+        self.coach_counter = self.create_counter("0", "Edzők")
+        self.client_counter = self.create_counter("0", "Kliensek")
 
         counters_layout.addWidget(self.user_counter)
         counters_layout.addWidget(self.coach_counter)
@@ -162,39 +345,12 @@ class MainPage(QWidget):
         self.stacked_widget.addWidget(counters_widget)
 
         # 2. Oldal: Grafikonok
-        charts_widget = QWidget()
-        charts_layout = QVBoxLayout()  # Most már vertikális layoutot használunk
-
-        # Görgethető terület a grafikonok számára
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-
-        # Grafikonok konténerének létrehozása
-        charts_container = QWidget()
-        charts_container_layout = QVBoxLayout()
-
-        # Többféle grafikon hozzáadása
-        charts_container_layout.addWidget(self.create_chart("Felhasználók eloszlása", "pie", [40, 60], ["Kliensek", "Edzők"]))
-        charts_container_layout.addWidget(self.create_chart("Aktivitások havi bontásban", "bar", [50, 130, 400, 350, 500], ["Jan", "Feb", "Már", "Ápr", "Máj"]))
-        charts_container_layout.addWidget(self.create_chart("Regisztrációk időbeli alakulása", "line", [50, 150, 100, 250, 880], ["Hét 1", "Hét 2", "Hét 3", "Hét 4", "Hét 5"]))
-        charts_container_layout.addWidget(self.create_chart("Edzők teljesítménye", "barh", [80, 90, 70, 95, 85], ["Edző 1", "Edző 2", "Edző 3", "Edző 4", "Edző 5"]))
-        charts_container_layout.addWidget(self.create_chart("Felhasználói aktivitás szórása", "scatter", np.random.rand(100) * 100, np.random.rand(100) * 100))
-
-        # Térköz hozzáadása a grafikonok között
-        charts_container_layout.setSpacing(20)
-
-        charts_container.setLayout(charts_container_layout)
-        scroll_area.setWidget(charts_container)
-
-        # A görgethető grafikonok hozzáadása a layouthoz
-        charts_layout.addWidget(scroll_area)
-
-        charts_widget.setLayout(charts_layout)
-        self.stacked_widget.addWidget(charts_widget)
+        self.stats_page = StatsPage()  # StatsPage példány létrehozása
+        self.stacked_widget.addWidget(self.stats_page)
 
         # 3. Oldal: Jogosultságok / Profilok
         self.permissions_widget = QWidget()
-        self.build_permissions_page()  # Létrehozza a profilok listáját
+        self.build_permissions_page()
         self.stacked_widget.addWidget(self.permissions_widget)
 
         # 4. Oldal: Edzők listája
@@ -224,9 +380,31 @@ class MainPage(QWidget):
 
         self.setLayout(main_layout)
 
+        # Timer beállítása a számlálók frissítéséhez
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_counters)
+        self.timer.start(300)  # 5 másodpercenként frissít
+
+    def update_counters(self):
+        """Számlálók frissítése valós adatokkal."""
+        users = APIClient.get_users()  # Kliensek
+        trainers = APIClient.get_trainers()  # Edzők
+
+        num_users = len(users) if users else 0
+        num_trainers = len(trainers) if trainers else 0
+
+        # Felhasználók száma = Kliensek száma + Edzők száma
+        self.user_counter.findChild(QLabel).setText(str(num_users + num_trainers))
+        
+        # Edzők száma
+        self.coach_counter.findChild(QLabel).setText(str(num_trainers))
+        
+        # Kliensek száma
+        self.client_counter.findChild(QLabel).setText(str(num_users))
+
     def show_charts(self):
         """Grafikonok megjelenítése."""
-        self.stacked_widget.setCurrentIndex(1)
+        self.stacked_widget.setCurrentWidget(self.stats_page)
 
     def show_counters(self, event=None):
         """Számlálók megjelenítése."""
@@ -271,17 +449,17 @@ class MainPage(QWidget):
             for col_idx, header in enumerate(headers):
                 # Az oszlopok neveit kisbetűssé alakítjuk, hogy megfeleljenek a JSON kulcsoknak
                 key = header.lower()
-                if key == "név":  # Ha az oszlop neve "Név", akkor a "full_name" mezőt használjuk
+                if key == "név":
                     key = "full_name"
-                elif key == "életkor":  # Ha az oszlop neve "Életkor", akkor az "age" mezőt használjuk
+                elif key == "életkor":
                     key = "age"
-                elif key == "e-mail":  # Ha az oszlop neve "E-mail", akkor az "email" mezőt használjuk
+                elif key == "e-mail":
                     key = "email"
-                elif key == "település":  # Ha az oszlop neve "Település", akkor a "location" mezőt használjuk
+                elif key == "település":
                     key = "location"
-                elif key == "specializáció":  # Ha az oszlop neve "Specializáció", akkor a "specialization" mezőt használjuk
+                elif key == "specializáció":
                     key = "specialization"
-                elif key == "árkategória":  # Ha az oszlop neve "Árkategória", akkor a "price_range" mezőt használjuk
+                elif key == "árkategória":
                     key = "price_range"
                 
                 # Az adat lekérése a JSON-ból
@@ -386,24 +564,24 @@ class MainPage(QWidget):
 
     def open_edit_window(self, data, item_type):
         """A szerkesztő ablak megnyitása QDialog-ként, dinamikus mezőkkel."""
-        edit_dialog = QDialog(self)  # A főablakot beállítjuk szülőnek
+        edit_dialog = QDialog(self)
         edit_dialog.setWindowTitle("Szerkesztés")
-        edit_dialog.resize(1000, 800)  # Ablak mérete: 600x400 pixel
+        edit_dialog.resize(1000, 800)
         layout = QVBoxLayout()
 
         # Mezők létrehozása a szerkesztéshez
-        self.edit_fields = {}  # Szótár a beviteli mezők tárolásához
+        self.edit_fields = {}
         for key, value in data.items():
-            if key == "id":  # Az ID-t nem szerkesztjük
+            if key == "id":
                 continue
-            label = QLabel(key.capitalize())  # Mezőnév (pl. "Full Name")
+            label = QLabel(key.capitalize())
             label.setStyleSheet("font-size: 16px; color: white;")
             layout.addWidget(label)
 
-            edit_field = QLineEdit(str(value))  # Mező értéke
+            edit_field = QLineEdit(str(value))
             edit_field.setStyleSheet("font-size: 16px; color: black; background-color: white;")
             layout.addWidget(edit_field)
-            self.edit_fields[key] = edit_field  # Mező tárolása a szótárban
+            self.edit_fields[key] = edit_field
 
         # Menti gomb
         save_button = QPushButton("Mentés")
@@ -442,13 +620,13 @@ class MainPage(QWidget):
         layout.addWidget(cancel_button)
 
         edit_dialog.setLayout(layout)
-        edit_dialog.exec_()  # Modális ablakként megjelenítjük
-        
+        edit_dialog.exec_()
+
     def get_edited_data(self):
         """Összegyűjti az összes szerkesztett adatot a mezőkből."""
         edited_data = {}
         for key, edit_field in self.edit_fields.items():
-            edited_data[key] = edit_field.text()  # Szöveg beolvasása a mezőből
+            edited_data[key] = edit_field.text()
         return edited_data
 
     def save_item(self, item_id, item_type, new_data):
@@ -475,43 +653,10 @@ class MainPage(QWidget):
         for y in range(image.height()):
             for x in range(image.width()):
                 pixel_color = image.pixelColor(x, y)
-                if pixel_color.alpha() > 0:  # Csak átlátszatlan pixeleket színezünk
+                if pixel_color.alpha() > 0:
                     image.setPixelColor(x, y, color)
 
         return QPixmap.fromImage(image)
-    
-    def create_chart(self, title, chart_type, data, labels=None, y_data=None):
-        """Grafikon generálása a megadott típus szerint."""
-        fig = Figure(figsize=(10, 5))  # Nagyobb méret a jobb láthatóság érdekében
-        canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
-
-        if chart_type == "pie":
-            ax.pie(data, labels=labels, autopct="%1.1f%%", colors=["orange", "lightblue", "green", "red", "purple"])
-        elif chart_type == "bar":
-            ax.bar(labels, data, color="orange")
-        elif chart_type == "line":
-            ax.plot(labels, data, marker="o", color="orange", linewidth=2)
-        elif chart_type == "barh":
-            ax.barh(labels, data, color="orange")
-        elif chart_type == "scatter":
-            # Ha y_data nincs megadva, létrehozunk egy azonos méretű tömböt
-            if y_data is None:
-                y_data = np.zeros_like(data)
-            # Győződjünk meg róla, hogy data és y_data azonos hosszúságúak legyenek:
-            if len(data) != len(y_data):
-                min_length = min(len(data), len(y_data))
-                data = data[:min_length]
-                y_data = y_data[:min_length]
-            ax.scatter(data, y_data, color="orange", s=50)
-
-        ax.set_title(title, color="orange", fontsize=16)
-        ax.set_facecolor("#222")
-        fig.patch.set_facecolor("#222")
-        ax.tick_params(colors="white")
-        ax.grid(color="gray", linestyle="--", linewidth=0.5)
-
-        return canvas
 
     def create_counter(self, value, label_text):
         widget = QWidget()
@@ -551,7 +696,6 @@ class MainPage(QWidget):
         self.permissions_widget = QWidget()
         permissions_layout = QHBoxLayout()
 
-        # A profilok tuple csak a nevet és a kép elérési útját tartalmazza
         profiles = [
             ("Magda Ágoston", "profilkepek/Agoston.jpg"),
             ("Kaiser Móric", "profilkepek/Moric.jpg"),
@@ -563,31 +707,19 @@ class MainPage(QWidget):
             profile_layout = QVBoxLayout()
             profile_widget.setStyleSheet("background-color: black; border-radius: 20px; padding: 20px;")
 
-            # Profilkép megjelenítése nagyobb méretben, kontrasztos kerettel
             profile_pic = QLabel()
-            pic = QPixmap(image_path).scaled(
-                450, 450, 
-                Qt.KeepAspectRatio, 
-                Qt.SmoothTransformation
-            )
+            pic = QPixmap(image_path).scaled(450, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             profile_pic.setPixmap(pic)
             profile_pic.setAlignment(Qt.AlignCenter)
-            profile_pic.setStyleSheet("""
-                border: 2px solid orange;
-                border-radius: 10px;
-                margin-bottom: 10px;
-            """)
+            profile_pic.setStyleSheet("border: 2px solid orange; border-radius: 10px; margin-bottom: 10px;")
 
-            # Animáció hozzáadása a profilképekhez
             profile_pic.enterEvent = lambda event, widget=profile_pic: self.animate_profile_pic(widget, True)
             profile_pic.leaveEvent = lambda event, widget=profile_pic: self.animate_profile_pic(widget, False)
 
-            # Név
             name_label = QLabel(name)
             name_label.setAlignment(Qt.AlignCenter)
             name_label.setStyleSheet("font-size: 22px; font-weight: bold; color: orange;")
 
-            # Részletek gomb
             details_button = QPushButton("Részletek")
             details_button.setStyleSheet("""
                 QPushButton {
@@ -604,7 +736,6 @@ class MainPage(QWidget):
             """)
             details_button.clicked.connect(lambda checked, name=name: self.show_profile_details(name))
 
-            # Layout összerakása
             profile_layout.addWidget(profile_pic)
             profile_layout.addWidget(name_label)
             profile_layout.addWidget(details_button)
@@ -623,7 +754,7 @@ class MainPage(QWidget):
         else:
             animation.setEndValue(QRect(rect.x() + 5, rect.y() + 5, rect.width() - 10, rect.height() - 10))
         animation.start()
-        
+
     def show_permissions(self):
         """Megjeleníti a profilok listáját (jogosultságok oldalt)."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
@@ -634,16 +765,13 @@ class MainPage(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignTop)
         
-        # Profil adatok lekérése
         data = self.profiles_data.get(profile_name, {})
         if not data:
             return
         
-        # Fő tartalom layout
         content_layout = QVBoxLayout()
         content_layout.setSpacing(30)
         
-        # Felső rész - Kép és név
         top_layout = QHBoxLayout()
         
         profile_pic = QLabel()
@@ -664,7 +792,6 @@ class MainPage(QWidget):
         top_layout.addLayout(name_role_layout)
         top_layout.addStretch()
         
-        # Középső rész - Adatok két oszlopban
         middle_layout = QHBoxLayout()
         left_data_layout = QVBoxLayout()
         right_data_layout = QVBoxLayout()
@@ -691,7 +818,6 @@ class MainPage(QWidget):
         middle_layout.addLayout(left_data_layout)
         middle_layout.addLayout(right_data_layout)
         
-        # Motivációs szöveg kiemeléssel
         motivation_label = QLabel(data["motivation"])
         motivation_label.setWordWrap(True)
         motivation_label.setStyleSheet(
@@ -699,7 +825,6 @@ class MainPage(QWidget):
             "padding: 15px; border-radius: 10px; font-style: italic;"
         )
         
-        # Vissza gomb animációval
         back_button = QPushButton("Vissza")
         back_button.setStyleSheet(
             "background-color: orange; font-size: 18px; padding: 12px; border-radius: 10px;"
@@ -708,7 +833,6 @@ class MainPage(QWidget):
         back_button.setCursor(Qt.PointingHandCursor)
         back_button.clicked.connect(self.back_to_permissions)
         
-        # Layout összerakása
         content_layout.addLayout(top_layout)
         content_layout.addLayout(middle_layout)
         content_layout.addWidget(motivation_label)
@@ -720,7 +844,6 @@ class MainPage(QWidget):
         self.stacked_widget.addWidget(details_widget)
         self.stacked_widget.setCurrentWidget(details_widget)
 
-        
     def animate_button(self, button, enter):
         """Animáció a gombra, amikor az egér belép vagy kilép."""
         animation = QPropertyAnimation(button, b"geometry")
@@ -731,31 +854,29 @@ class MainPage(QWidget):
         else:
             animation.setEndValue(QRect(rect.x() + 5, rect.y() + 5, rect.width() - 10, rect.height() - 10))
         animation.start()
-        
+
     def back_to_permissions(self):
         """Visszatérés a profilok listájához."""
         self.stacked_widget.setCurrentWidget(self.permissions_widget)
 
     def logout(self):
         """Kijelentkezés logika - visszadob a login oldalra."""
-        self.close()  # Aktuális ablak bezárása
+        self.close()
 
-        # Animált loading screen létrehozása
         self.loading_screen = LoadingScreen("Kijelentkezés...")
         self.loading_screen.show()
 
-        # Timer beállítása a login ablak újramegjelenítéséhez
-        QTimer.singleShot(2000, self.show_login_window)
+        QTimer.singleShot(500, self.show_login_window)
 
     def show_login_window(self):
         """Login ablak újramegjelenítése."""
-        from login_window import LoginWindow  # Késleltetett importálás a körkörös import elkerülésére
-        self.login_window = LoginWindow(initial_load=False)  # Új login ablak megnyitása, de nem kezdeti betöltés
+        from login_window import LoginWindow
+        self.login_window = LoginWindow(initial_load=False)
         self.login_window.show()
-        self.loading_screen.close()  # Loading screen bezárása
+        self.loading_screen.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainPage("Magda Ágoston")  # Példa admin névvel
+    window = MainPage("Magda Ágoston")
     window.show()
     sys.exit(app.exec_())
