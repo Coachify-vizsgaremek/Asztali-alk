@@ -65,12 +65,12 @@ class StatsPage(QWidget):
         ages = [user['age'] for user in users]
         self.add_histogram(self.scroll_layout, ages, "Felhasználók életkora")
 
-        # Edzők specializációja (annotált nyilakkal)
+        # Edzők specializációja (sávdiagram)
         specializations = {}
         for trainer in trainers:
             spec = trainer.get('specialization', 'Nincs megadva')
             specializations[spec] = specializations.get(spec, 0) + 1
-        self.add_pie_chart(self.scroll_layout, list(specializations.keys()), list(specializations.values()), "Edzők specializációja")
+        self.add_bar_chart(self.scroll_layout, list(specializations.keys()), list(specializations.values()), "Edzők specializációja")
 
         # Edzők árkategóriái (oszlopdiagram)
         price_ranges = {}
@@ -78,87 +78,6 @@ class StatsPage(QWidget):
             price = trainer.get('price_range', 'Nincs megadva')
             price_ranges[price] = price_ranges.get(price, 0) + 1
         self.add_bar_chart(self.scroll_layout, list(price_ranges.keys()), list(price_ranges.values()), "Edzők árkategóriái")
-
-    def add_pie_chart(self, layout, labels, sizes, title):
-        """Annotált nyilakkal ellátott grafikus megoldás."""
-        fig, ax = plt.subplots(figsize=(10, 8))  # Nagyobb méret a grafikus megoldáshoz
-        fig.patch.set_facecolor('#222')  # Háttérszín beállítása
-        ax.set_facecolor('#222')  # Háttérszín beállítása
-
-        # Színek dinamikus generálása (6 különböző szín)
-        colors = plt.cm.tab20.colors[:len(labels)]  # Csak annyi szín, ahány spec van
-
-        # Kör alaprajz (csak dekoráció)
-        circle = plt.Circle((0, 0), 1, color='#333', fill=False, linewidth=2)
-        ax.add_artist(circle)
-
-        # Szövegek és nyilak elhelyezése
-        total = sum(sizes)
-        angles = [size / total * 360 for size in sizes]  # Szögek kiszámítása
-        start_angle = 0
-
-        for i, (label, size, color) in enumerate(zip(labels, sizes, colors)):
-            # Szöveg pozíciója
-            angle = start_angle + angles[i] / 2  # Középszög
-            x = np.cos(np.deg2rad(angle))  # X koordináta
-            y = np.sin(np.deg2rad(angle))  # Y koordináta
-
-            # Szöveg hozzáadása (körön kívül, egyenletes elosztással)
-            text_distance = 1.3  # Szöveg távolsága a középponttól
-            text = ax.text(
-                x * text_distance, y * text_distance, label,  # Szöveg pozíciója
-                fontsize=14, color='white', fontweight='bold', ha='center', va='center'
-            )
-
-            # Nyíl kezdete a szöveg szélétől (logikusan elhelyezve)
-            bbox = text.get_window_extent(renderer=fig.canvas.get_renderer())  # Szöveg mérete
-            bbox_coords = ax.transData.inverted().transform(bbox)  # Koordináták átalakítása
-
-            if x > 0:  # Jobb oldalon lévő szövegek
-                arrow_start_x = bbox_coords[0, 0]  # Szöveg bal széle
-            else:  # Bal oldalon lévő szövegek
-                arrow_start_x = bbox_coords[1, 0]  # Szöveg jobb széle
-
-            if y > 0:  # Felső részben lévő szövegek
-                arrow_start_y = bbox_coords[1, 1]  # Szöveg alja
-            else:  # Alsó részben lévő szövegek
-                arrow_start_y = bbox_coords[0, 1]  # Szöveg teteje
-
-            # Nyíl rajzolása (a szöveg szélétől indul)
-            arrow_end_distance = 1.5  # Nyíl vége a százalékhoz
-            ax.annotate(
-                '',  # Nincs szöveg a nyílon
-                xy=(x * arrow_end_distance, y * arrow_end_distance),  # Nyíl vége
-                xytext=(arrow_start_x, arrow_start_y),  # Nyíl kezdete (szöveg szélétől)
-                arrowprops=dict(arrowstyle='->', color=color, lw=2),  # Nyíl stílusa
-            )
-
-            # Százalék hozzáadása a nyíl végére
-            ax.text(
-                x * (arrow_end_distance + 0.1), y * (arrow_end_distance + 0.1), f'{size / total * 100:.1f}%',  # Százalék pozíciója
-                fontsize=12, color=color, fontweight='bold', ha='center', va='center'
-            )
-
-            # Kör színezése arányosan az adatokkal
-            wedge_angle = angles[i]
-            wedge_start = start_angle
-            wedge = plt.Circle((0, 0), 1.05, color=color, alpha=0.3, transform=ax.transData)  # Átlátszó színezés
-            ax.add_artist(wedge)
-
-            start_angle += angles[i]  # Következő szög
-
-        # Tengelyek eltüntetése
-        ax.set_xlim(-2, 2)
-        ax.set_ylim(-2, 2)
-        ax.axis('off')
-
-        # Cím hozzáadása
-        ax.set_title(title, color="orange", fontsize=16, pad=20)
-
-        # Canvas hozzáadása a layouthoz
-        canvas = FigureCanvas(fig)
-        layout.addWidget(canvas)
-        
 
     def add_histogram(self, layout, data, title):
         """Hisztogram hozzáadása."""
@@ -176,20 +95,29 @@ class StatsPage(QWidget):
         """Oszlopdiagram hozzáadása."""
         fig, ax = plt.subplots(figsize=(10, 6))  # Nagyobb méret az oszlopdiagramnak
 
-        # Alsó margó növelése, hogy az "ár HUF/óra" feliratok láthatóak legyenek
-        fig.subplots_adjust(bottom=0.3)
+        # Alsó margó növelése, hogy a hosszú címkék is kiférjenek
+        fig.subplots_adjust(bottom=0.4)  # Növeltük a margót 0.4-re
 
-        ax.bar(labels, values, color='orange')
-        ax.set_title(title, color="orange", fontsize=16, pad=20)  # Cím stílusa
+        # Oszlopdiagram rajzolása
+        bars = ax.bar(labels, values, color='orange')
+
+        # Cím hozzáadása
+        ax.set_title(title, color="orange", fontsize=16, pad=20)
 
         # X tengely szövegeinek elhelyezése
         ax.set_xticks(range(len(labels)))  # X tengely pozíciók
         ax.set_xticklabels(labels, rotation=45, ha='right', color='white', fontsize=12)  # Szöveg stílusa
 
-        ax.set_facecolor("#222")  # Háttérszín beállítása
-        fig.patch.set_facecolor("#222")  # Háttérszín beállítása
-        ax.tick_params(colors="white")  # Tengelyek szövegének színe
-        ax.grid(color="gray", linestyle="--", linewidth=0.5)  # Rács stílusa
+        # Háttérszín és egyéb stílusbeállítások
+        ax.set_facecolor("#222")
+        fig.patch.set_facecolor("#222")
+        ax.tick_params(colors="white")
+        ax.grid(color="gray", linestyle="--", linewidth=0.5)
+
+        # Y tengely címkéinek formázása
+        ax.set_ylabel("Darabszám", color="white", fontsize=14)
+
+        # Canvas hozzáadása a layouthoz
         canvas = FigureCanvas(fig)
         layout.addWidget(canvas)
         
@@ -425,7 +353,7 @@ class MainPage(QWidget):
         trainers = APIClient.get_trainers()
         print("Edzők adatai a backendtől:", trainers)  # Hibakereséshez
         if trainers:
-            self.display_data_in_table(trainers, self.trainers_layout, ["ID", "Név", "Település", "Specializáció", "Árkategória"])
+            self.display_data_in_table(trainers, self.trainers_layout, ["ID", "Név", "Település", "Specializáció", "Árkategória"], "trainer")
         else:
             QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni az edzők adatait.")
 
@@ -434,12 +362,227 @@ class MainPage(QWidget):
         users = APIClient.get_users()
         print("Felhasználók adatai a backendtől:", users)  # Hibakereséshez
         if users:
-            self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"])
+            self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"], "user")
         else:
             QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni a felhasználók adatait.")
 
-    def display_data_in_table(self, data, layout, headers):
+    def display_data_in_table(self, data, layout, headers, item_type):
         """Adatok megjelenítése táblázatban."""
+        # Töröljük a régi widgeteket
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+        # Keresőmező és rendezési gombok hozzáadása
+        search_layout = QHBoxLayout()
+        search_field = QLineEdit()
+        search_field.setPlaceholderText("Keresés név alapján...")
+        search_field.setStyleSheet("""
+            QLineEdit {
+                font-size: 16px;
+                padding: 8px;
+                border: 2px solid orange;
+                border-radius: 10px;
+                background-color: #333;
+                color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #ffb84d;
+            }
+        """)
+        search_field.textChanged.connect(lambda text, data=data, layout=layout, headers=headers, item_type=item_type: self.filter_table(text, data, layout, headers, item_type))
+        search_layout.addWidget(search_field)
+
+        # Rendezési gombok hozzáadása
+        if item_type == "user":
+            sort_id_asc = QPushButton("ID ↑")
+            sort_id_asc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_id_asc.clicked.connect(lambda: self.sort_table(data, layout, headers, "id", "asc", item_type))
+            
+            sort_id_desc = QPushButton("ID ↓")
+            sort_id_desc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_id_desc.clicked.connect(lambda: self.sort_table(data, layout, headers, "id", "desc", item_type))
+            
+            sort_name_asc = QPushButton("Név A-Z")
+            sort_name_asc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_name_asc.clicked.connect(lambda: self.sort_table(data, layout, headers, "name", "asc", item_type))
+            
+            sort_name_desc = QPushButton("Név Z-A")
+            sort_name_desc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_name_desc.clicked.connect(lambda: self.sort_table(data, layout, headers, "name", "desc", item_type))
+            
+            search_layout.addWidget(sort_id_asc)
+            search_layout.addWidget(sort_id_desc)
+            search_layout.addWidget(sort_name_asc)
+            search_layout.addWidget(sort_name_desc)
+        
+        elif item_type == "trainer":
+            sort_id_asc = QPushButton("ID ↑")
+            sort_id_asc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_id_asc.clicked.connect(lambda: self.sort_table(data, layout, headers, "id", "asc", item_type))
+            
+            sort_id_desc = QPushButton("ID ↓")
+            sort_id_desc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_id_desc.clicked.connect(lambda: self.sort_table(data, layout, headers, "id", "desc", item_type))
+            
+            sort_name_asc = QPushButton("Név A-Z")
+            sort_name_asc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_name_asc.clicked.connect(lambda: self.sort_table(data, layout, headers, "name", "asc", item_type))
+            
+            sort_name_desc = QPushButton("Név Z-A")
+            sort_name_desc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_name_desc.clicked.connect(lambda: self.sort_table(data, layout, headers, "name", "desc", item_type))
+            
+            sort_price_asc = QPushButton("Ár ↑")
+            sort_price_asc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_price_asc.clicked.connect(lambda: self.sort_table(data, layout, headers, "price", "asc", item_type))
+            
+            sort_price_desc = QPushButton("Ár ↓")
+            sort_price_desc.setStyleSheet("""
+                QPushButton {
+                    background-color: orange;
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 8px;
+                    margin-left: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb84d;
+                }
+            """)
+            sort_price_desc.clicked.connect(lambda: self.sort_table(data, layout, headers, "price", "desc", item_type))
+            
+            search_layout.addWidget(sort_id_asc)
+            search_layout.addWidget(sort_id_desc)
+            search_layout.addWidget(sort_name_asc)
+            search_layout.addWidget(sort_name_desc)
+            search_layout.addWidget(sort_price_asc)
+            search_layout.addWidget(sort_price_desc)
+
+        layout.addLayout(search_layout)
+
+        # Táblázat létrehozása
         table = QTableWidget()
         table.setRowCount(len(data))
         table.setColumnCount(len(headers) + 2)  # +2 a törlés és módosítás gombok miatt
@@ -517,15 +660,23 @@ class MainPage(QWidget):
             }
         """)
 
-        # Régi widgetek törlése a layoutból
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
         # Táblázat hozzáadása a layouthoz
         layout.addWidget(table)
+
+    def filter_table(self, text, data, layout, headers, item_type):
+        """Táblázat szűrése név alapján."""
+        filtered_data = [item for item in data if text.lower() in item.get("full_name", "").lower()]
+        self.display_data_in_table(filtered_data, layout, headers, item_type)
+
+    def sort_table(self, data, layout, headers, sort_by, order, item_type):
+        """Táblázat rendezése."""
+        if sort_by == "id":
+            sorted_data = sorted(data, key=lambda x: x.get("id", 0), reverse=(order == "desc"))
+        elif sort_by == "name":
+            sorted_data = sorted(data, key=lambda x: x.get("full_name", "").lower(), reverse=(order == "desc"))
+        elif sort_by == "price":
+            sorted_data = sorted(data, key=lambda x: float(x.get("price_range", 0)), reverse=(order == "desc"))
+        self.display_data_in_table(sorted_data, layout, headers, item_type)
 
     def delete_item(self, item_id, item_type):
         """Elem törlése az adatbázisból."""
