@@ -79,6 +79,13 @@ class StatsPage(QWidget):
             price_ranges[price] = price_ranges.get(price, 0) + 1
         self.add_bar_chart(self.scroll_layout, list(price_ranges.keys()), list(price_ranges.values()), "Edzők árkategóriái")
 
+        # Edzők elhelyezkedése (sávdiagram)
+        locations = {}
+        for trainer in trainers:
+            location = trainer.get('location', 'Nincs megadva')
+            locations[location] = locations.get(location, 0) + 1
+        self.add_bar_chart(self.scroll_layout, list(locations.keys()), list(locations.values()), "Edzők elhelyezkedése")
+
     def add_histogram(self, layout, data, title):
         """Hisztogram hozzáadása."""
         fig, ax = plt.subplots(figsize=(10, 6))  # Nagyobb méret a hisztogramnak
@@ -88,6 +95,10 @@ class StatsPage(QWidget):
         fig.patch.set_facecolor("#222")  # Háttérszín beállítása
         ax.tick_params(colors="white")  # Tengelyek szövegének színe
         ax.grid(color="gray", linestyle="--", linewidth=0.5)  # Rács stílusa
+
+        # Y tengely címkéjének hozzáadása
+        ax.set_ylabel("Darabszám", color="white", fontsize=14)
+
         canvas = FigureCanvas(fig)
         layout.addWidget(canvas)
 
@@ -120,8 +131,7 @@ class StatsPage(QWidget):
         # Canvas hozzáadása a layouthoz
         canvas = FigureCanvas(fig)
         layout.addWidget(canvas)
-        
-        
+
 class MainPage(QWidget):
     def __init__(self, admin_name):
         super().__init__()
@@ -365,7 +375,6 @@ class MainPage(QWidget):
             self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"], "user")
         else:
             QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni a felhasználók adatait.")
-
     def display_data_in_table(self, data, layout, headers, item_type):
         """Adatok megjelenítése táblázatban."""
         # Töröljük a régi widgeteket
@@ -675,6 +684,7 @@ class MainPage(QWidget):
         elif sort_by == "name":
             sorted_data = sorted(data, key=lambda x: x.get("full_name", "").lower(), reverse=(order == "desc"))
         elif sort_by == "price":
+            # A price_range mezőt számmá konvertáljuk a rendezés előtt
             sorted_data = sorted(data, key=lambda x: float(x.get("price_range", 0)), reverse=(order == "desc"))
         self.display_data_in_table(sorted_data, layout, headers, item_type)
 
