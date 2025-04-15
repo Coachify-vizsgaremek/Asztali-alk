@@ -1,0 +1,67 @@
+{
+	"info": {
+		"_postman_id": "15e17aba-56b6-4e0b-ad64-1d81126eb588",
+		"name": "Coachify_API_Tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44128490",
+		"_collection_link": "https://podhoranyidonat.postman.co/workspace/Podhoranyi-Donat's-Workspace~9eba110e-d493-4a41-8da0-81c3ce4aa443/collection/44128490-15e17aba-56b6-4e0b-ad64-1d81126eb588?action=share&source=collection_link&creator=44128490"
+	},
+	"item": [
+		{
+			"name": "GET Felhasználók lista",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": [
+				{
+					"name": "New Request",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/kliensek",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"kliensek"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Server",
+							"value": "Werkzeug/3.1.3 Python/3.11.3"
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 15 Apr 2025 22:19:38 GMT"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "4741"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Connection",
+							"value": "close"
+						}
+					],
+					"cookie": [],
+					"body": "[\n    {\n        \"id\": 2,\n        \"full_name\": \"Anna Szabó\",\n        \"age\": 25,\n        \"email\": \"aszabo@example.com\"\n    },\n    {\n        \"id\": 3,\n        \"full_name\": \"Béla Horváth Karcsi\",\n        \"age\": 28,\n        \"email\": \"bhorvath@example.com\"\n    },\n    {\n        \"id\": 4,\n        \"full_name\": \"Péter Varga\",\n        \"age\": 35,\n        \"email\": \"pvarga@example.com\"\n    },\n    {\n        \"id\": 5,\n        \"full_name\": \"Dávid Farkas\",\n        \"age\": 40,\n        \"email\": \"dfarkas@example.com\"\n    },\n    {\n        \"id\": 6,\n        \"full_name\": \"Zsófia Szabó\",\n        \"age\": 32,\n        \"email\": \"zszabo1@example.com\"\n    },\n    {\n        \"id\": 8,\n        \"full_name\": \"Emese Tóth\",\n        \"age\": 27,\n        \"email\": \"etoth@example.com\"\n    },\n    {\n        \"id\": 9,\n        \"full_name\": \"Károly Kiss\",\n        \"age\": 60,\n        \"email\": \"kkiss@example.com\"\n    },\n    {\n        \"id\": 10,\n        \"full_name\": \"Mária Horváth Nikol\",\n        \"age\": 45,\n        \"email\": \"mhorvath1@example.com\"\n    },\n    {\n        \"id\": 11,\n        \"full_name\": \"Bence Kovacsics\",\n        \"age\": 33,\n        \"email\": \"bkovacs@example.com\"\n    },\n    {\n        \"id\": 12,\n        \"full_name\": \"Dóra Vargá\",\n        \"age\": 24,\n        \"email\": \"dvarga@example.com\"\n    },\n    {\n        \"id\": 13,\n        \"full_name\": \"Róbert Molnár\",\n        \"age\": 29,\n        \"email\": \"rmolnar@example.com\"\n    },\n    {\n        \"id\": 14,\n        \"full_name\": \"Anita Kiss\",\n        \"age\": 38,\n        \"email\": \"akiss1@example.com\"\n    },\n    {\n        \"id\": 15,\n        \"full_name\": \"Ádám Farkas\",\n        \"age\": 41,\n        \"email\": \"afarkas@example.com\"\n    },\n    {\n        \"id\": 16,\n        \"full_name\": \"Tímea Kis\",\n        \"age\": 36,\n        \"email\": \"tkiss@example.com\"\n    },\n    {\n        \"id\": 17,\n        \"full_name\": \"Zoltán Tóth\",\n        \"age\": 31,\n        \"email\": \"ztoth@example.com\"\n    },\n    {\n        \"id\": 18,\n        \"full_name\": \"András Horváth\",\n        \"age\": 29,\n        \"email\": \"ahorvath@example.com\"\n    },\n    {\n        \"id\": 19,\n        \"full_name\": \"Krisztina Nagy\",\n        \"age\": 22,\n        \"email\": \"knagy@example.com\"\n    },\n    {\n        \"id\": 20,\n        \"full_name\": \"László Papp\",\n        \"age\": 55,\n        \"email\": \"lpapp@example.com\"\n    },\n    {\n        \"id\": 21,\n        \"full_name\": \"Anett Kiss\",\n        \"age\": 37,\n        \"email\": \"akiss2@example.com\"\n    },\n    {\n        \"id\": 22,\n        \"full_name\": \"Bence Szabó\",\n        \"age\": 26,\n        \"email\": \"bszabo@example.com\"\n    },\n    {\n        \"id\": 23,\n        \"full_name\": \"Lilla Kovács\",\n        \"age\": 29,\n        \"email\": \"lkovacs@example.com\"\n    },\n    {\n        \"id\": 24,\n        \"full_name\": \"Gábor Kocsis\",\n        \"age\": 49,\n        \"email\": \"gkocsis@example.com\"\n    },\n    {\n        \"id\": 25,\n        \"full_name\": \"Boglárka Szilágyi\",\n        \"age\": 34,\n        \"email\": \"bszilagyi@example.com\"\n    },\n    {\n        \"id\": 26,\n        \"full_name\": \"Péter Kovács\",\n        \"age\": 27,\n        \"email\": \"pkovacs@example.com\"\n    },\n    {\n        \"id\": 27,\n        \"full_name\": \"Mária Sándor\",\n        \"age\": 47,\n        \"email\": \"msandor@example.com\"\n    },\n    {\n        \"id\": 28,\n        \"full_name\": \"Zoltán Fekete\",\n        \"age\": 58,\n        \"email\": \"zfekete@example.com\"\n    },\n    {\n        \"id\": 29,\n        \"full_name\": \"Eszter Lukács\",\n        \"age\": 29,\n        \"email\": \"elukacs@example.com\"\n    },\n    {\n        \"id\": 30,\n        \"full_name\": \"József Fodor\",\n        \"age\": 44,\n        \"email\": \"jfodor@example.com\"\n    },\n    {\n        \"id\": 31,\n        \"full_name\": \"Katalin Varga\",\n        \"age\": 38,\n        \"email\": \"kvarga@example.com\"\n    },\n    {\n        \"id\": 32,\n        \"full_name\": \"Miklós Szabó\",\n        \"age\": 36,\n        \"email\": \"mszabo@example.com\"\n    },\n    {\n        \"id\": 33,\n        \"full_name\": \"Szilvia Kocsis\",\n        \"age\": 42,\n        \"email\": \"skocsis@example.com\"\n    },\n    {\n        \"id\": 34,\n        \"full_name\": \"Rita Tóth\",\n        \"age\": 28,\n        \"email\": \"rtoth@example.com\"\n    },\n    {\n        \"id\": 35,\n        \"full_name\": \"Imre Horváth\",\n        \"age\": 31,\n        \"email\": \"ihorvath@example.com\"\n    },\n    {\n        \"id\": 36,\n        \"full_name\": \"Csaba Papp\",\n        \"age\": 41,\n        \"email\": \"cpapp@example.com\"\n    },\n    {\n        \"id\": 37,\n        \"full_name\": \"Zsuzsanna Kovács\",\n        \"age\": 33,\n        \"email\": \"zkovacs@example.com\"\n    },\n    {\n        \"id\": 38,\n        \"full_name\": \"Krisztián Kovács\",\n        \"age\": 28,\n        \"email\": \"kkovacs1@example.com\"\n    },\n    {\n        \"id\": 39,\n        \"full_name\": \"Gergely Nagy\",\n        \"age\": 30,\n        \"email\": \"gnagy@example.com\"\n    },\n    {\n        \"id\": 40,\n        \"full_name\": \"Andrea Varga\",\n        \"age\": 24,\n        \"email\": \"avarga@example.com\"\n    },\n    {\n        \"id\": 41,\n        \"full_name\": \"Judit Farkas\",\n        \"age\": 27,\n        \"email\": \"jfarkas@example.com\"\n    },\n    {\n        \"id\": 42,\n        \"full_name\": \"Viktor Szabó\",\n        \"age\": 34,\n        \"email\": \"vszabo@example.com\"\n    },\n    {\n        \"id\": 43,\n        \"full_name\": \"László Tóth\",\n        \"age\": 51,\n        \"email\": \"ltoth@example.com\"\n    },\n    {\n        \"id\": 44,\n        \"full_name\": \"Réka Szilágyi\",\n        \"age\": 32,\n        \"email\": \"rszilagyi@example.com\"\n    },\n    {\n        \"id\": 45,\n        \"full_name\": \"Zoltán Szabó\",\n        \"age\": 45,\n        \"email\": \"zszabo2@example.com\"\n    },\n    {\n        \"id\": 46,\n        \"full_name\": \"Fanni Papp\",\n        \"age\": 36,\n        \"email\": \"fpapp@example.com\"\n    },\n    {\n        \"id\": 47,\n        \"full_name\": \"Erzsébet Fekete\",\n        \"age\": 40,\n        \"email\": \"efekete@example.com\"\n    },\n    {\n        \"id\": 48,\n        \"full_name\": \"János Molnár\",\n        \"age\": 39,\n        \"email\": \"jmolnar@example.com\"\n    },\n    {\n        \"id\": 49,\n        \"full_name\": \"Márton Horváth\",\n        \"age\": 26,\n        \"email\": \"mhorvath2@example.com\"\n    },\n    {\n        \"id\": 50,\n        \"full_name\": \"Krisztina Farkas\",\n        \"age\": 25,\n        \"email\": \"kfarkas@example.com\"\n    },\n    {\n        \"id\": 51,\n        \"full_name\": \"Tibor Kiss\",\n        \"age\": 50,\n        \"email\": \"tkiss1@example.com\"\n    },\n    {\n        \"id\": 52,\n        \"full_name\": \"Ilona Papp\",\n        \"age\": 28,\n        \"email\": \"ipapp@example.com\"\n    },\n    {\n        \"id\": 53,\n        \"full_name\": \"Zoltán Nagy\",\n        \"age\": 55,\n        \"email\": \"znagy@example.com\"\n    },\n    {\n        \"id\": 54,\n        \"full_name\": \"Mária Kiss\",\n        \"age\": 38,\n        \"email\": \"mkiss@example.com\"\n    },\n    {\n        \"id\": 55,\n        \"full_name\": \"Norbert Tóth\",\n        \"age\": 31,\n        \"email\": \"ntoth@example.com\"\n    },\n    {\n        \"id\": 56,\n        \"full_name\": \"Tímea Szabó\",\n        \"age\": 41,\n        \"email\": \"tszabo@example.com\"\n    },\n    {\n        \"id\": 57,\n        \"full_name\": \"László Fodor\",\n        \"age\": 46,\n        \"email\": \"lfodor@example.com\"\n    },\n    {\n        \"id\": 58,\n        \"full_name\": \"József Papp\",\n        \"age\": 52,\n        \"email\": \"jpapp@example.com\"\n    }\n]"
+				}
+			]
+		}
+	]
+}
