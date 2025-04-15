@@ -152,9 +152,9 @@ class MainPage(QWidget):
                 "age": 35,
                 "gender": "Férfi",
                 "nationality": "Magyar",
-                "income": "1.500.000 HUF",
+                "income": "*** HUF",
                 "username": "admin1",
-                "code": "admin1"
+                "code": "***"
             },
             "Kaiser Móric": {
                 "image": "profilkepek/Moric.jpg",
@@ -166,9 +166,9 @@ class MainPage(QWidget):
                 "age": 30,
                 "gender": "Férfi",
                 "nationality": "Magyar",
-                "income": "1.200.000 HUF",
+                "income": "*** HUF",
                 "username": "admin2",
-                "code": "admin2"
+                "code": "***"
             },
             "Podhorányi Donát": {
                 "image": "profilkepek/Donat.jpg",
@@ -180,9 +180,9 @@ class MainPage(QWidget):
                 "age": 28,
                 "gender": "Férfi",
                 "nationality": "Magyar",
-                "income": "1.300.000 HUF",
+                "income": "*** HUF",
                 "username": "admin3",
-                "code": "admin3"
+                "code": "***"
             }
         }
 
@@ -361,7 +361,7 @@ class MainPage(QWidget):
     def load_trainers(self):
         """Edzők adatainak betöltése és megjelenítése."""
         trainers = APIClient.get_trainers()
-        print("Edzők adatai a backendtől:", trainers)  # Hibakereséshez
+        #print("Edzők adatai a backendtől:", trainers)  # Hibakereséshez
         if trainers:
             self.display_data_in_table(trainers, self.trainers_layout, ["ID", "Név", "Település", "Specializáció", "Árkategória"], "trainer")
         else:
@@ -370,11 +370,13 @@ class MainPage(QWidget):
     def load_users(self):
         """Felhasználók adatainak betöltése és megjelenítése."""
         users = APIClient.get_users()
-        print("Felhasználók adatai a backendtől:", users)  # Hibakereséshez
         if users:
-            self.display_data_in_table(users, self.users_layout, ["ID", "Név", "Életkor", "E-mail"], "user")
+            self.display_data_in_table(users, self.users_layout, 
+                                    ["ID", "Név", "Életkor", "E-mail"], 
+                                    "user")
         else:
             QMessageBox.warning(self, "Hiba", "Nem sikerült betölteni a felhasználók adatait.")
+
     def display_data_in_table(self, data, layout, headers, item_type):
         """Adatok megjelenítése táblázatban."""
         # Töröljük a régi widgeteket
@@ -599,26 +601,22 @@ class MainPage(QWidget):
 
         for row_idx, row_data in enumerate(data):
             for col_idx, header in enumerate(headers):
-                # Az oszlopok neveit kisbetűssé alakítjuk, hogy megfeleljenek a JSON kulcsoknak
-                key = header.lower()
-                if key == "név":
-                    key = "full_name"
-                elif key == "életkor":
-                    key = "age"
-                elif key == "e-mail":
-                    key = "email"
-                elif key == "település":
-                    key = "location"
-                elif key == "specializáció":
-                    key = "specialization"
-                elif key == "árkategória":
-                    key = "price_range"
+                # Mezők megfeleltetése az adatbázis oszlopokkal
+                if header == "ID":
+                    value = str(row_data.get("id", ""))
+                elif header == "Név":
+                    value = row_data.get("full_name", "")
+                elif header == "Életkor":
+                    value = str(row_data.get("age", ""))
+                elif header == "E-mail":
+                    value = row_data.get("email", "")
+                elif header == "Telefonszám":
+                    value = row_data.get("phone", "Nincs megadva")  # Ez nincs az adatbázisban
                 
-                # Az adat lekérése a JSON-ból
-                item = QTableWidgetItem(str(row_data.get(key, "")))
+                item = QTableWidgetItem(value)
                 table.setItem(row_idx, col_idx, item)
 
-            # Törlés gomb hozzáadása minden sorhoz
+            # Törlés gomb
             delete_button = QPushButton("Törlés")
             delete_button.setStyleSheet("""
                 QPushButton {
@@ -632,10 +630,10 @@ class MainPage(QWidget):
                     background-color: darkred;
                 }
             """)
-            delete_button.clicked.connect(lambda _, row=row_idx: self.delete_item(data[row]["id"], "trainer" if headers[0] == "ID" else "user"))
+            delete_button.clicked.connect(lambda _, row=row_idx: self.delete_item(data[row]["id"], "user"))
             table.setCellWidget(row_idx, len(headers), delete_button)
 
-            # Módosítás gomb hozzáadása minden sorhoz
+            # Módosítás gomb
             edit_button = QPushButton("Módosítás")
             edit_button.setStyleSheet("""
                 QPushButton {
@@ -649,7 +647,7 @@ class MainPage(QWidget):
                     background-color: #ffb84d;
                 }
             """)
-            edit_button.clicked.connect(lambda _, row=row_idx: self.edit_item(data[row]["id"], "trainer" if headers[0] == "ID" else "user"))
+            edit_button.clicked.connect(lambda _, row=row_idx: self.edit_item(data[row]["id"], "user"))
             table.setCellWidget(row_idx, len(headers) + 1, edit_button)
 
         # Táblázat formázása
